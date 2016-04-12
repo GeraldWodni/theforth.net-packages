@@ -14,9 +14,9 @@ search for a line starting with "key-value license" and treat the rest of the li
  - **x.x.x**: symlink to the highest version directory
  - **x.x.x-version**: file containing the highest version number (e.g. 1.2.3)
  - **N.x.x**: symlink to the highest version directory starting with *N.*
- - **N.x.x-version**: file containing the highest version number starting with *N.* (e.g. N.2.3)
+ - **N.x.x-version**: file containing the highest version number starting with *N.* (e.g. N=10: 10.22.33)
  - **N.M.x**: symlink to the highest version directory starting with *N.M.*
- - **N.M.x-version**: file containing the highest version number starting with *N.M.* (e.g. N.M.3)
+ - **N.M.x-version**: file containing the highest version number starting with *N.M.* (e.g. N=2, M=4: 2.4.123)
  - **current**: same as *x.x.x*
  - **current-version**: same as *x.x.x-version*
  - **recent**: symlink to most recently added version
