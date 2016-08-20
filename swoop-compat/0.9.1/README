@@ -1,0 +1,56 @@
+PORTABLE SWOOP
+
+  Get SwoopPortable.f from http://soton.mpeforth.com/flag/swoop/index.html
+
+  Which includes a VFX Forth harness and a SwiftForth harness (although
+  SwiftForth's included ASWOOP is functionality superior.)
+
+  This package includes harnesses for gforth and iforth.
+
+CONDITIONAL LOADING
+
+  Portable SWOOP begins with tests that conditionally load its SwiftForth and
+  VFX Harnesses.  If you'd like to add to these tests:
+
+  [defined] gforth [if]
+  include Gforthharness.fs
+  [then]
+
+  S" IFORTH" environment? [if] drop
+  include iforth-harness.fs
+  [then]
+
+DEPENDENCIES
+
+  These harnesses also depend on SwiftForth's PACKAGE words, available at
+  http://theforth.net/package/package
+
+DEFICIENCIES
+
+  SwiftForth includes [OBJECTS ... OBJECTS] locals syntax that greatly eases
+  OO-heavy code.  SwoopPortable.f lacks this syntax.
+
+USAGE
+
+  For example, to load and run the tests from scratch with gforth, assuming
+  that PACKAGE words are in a neighboring directory, and that SwoopPortable.f has
+  been placed in the current directory:
+
+  $ gforth -e 'include ../package/compat-gforth.fs include ../package/package.fs include Gforthharness.fs include SwoopPortable.f'
+  redefined OOP  Gforth 0.7.2, Copyright (C) 1995-2008 Free Software Foundation, Inc.
+  Gforth comes with ABSOLUTELY NO WARRANTY; for details type `license'
+  Type `bye' to exit
+  include tests.fs 
+  (0, 0) 
+  (3, 1) 
+  Bob the Protagonist@(0, 0) 
+  Bob the Protagonist@(3, 0) 
+  Gobby the Goblin@(5, 5) 
+  
+  
+  -- Expected output: --
+  (0, 0) 
+  (3, 1) 
+  Bob the Protagonist@(0, 0) 
+  Bob the Protagonist@(3, 0) 
+  Gobby the Goblin@(5, 5)  ok
