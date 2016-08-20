@@ -1,0 +1,63 @@
+ABOUT
+
+  This package is for a script 'gencon' which produces C code that can be
+  compiled and executed to produce a Forth constant library.
+
+  Compare the 'example' and 'expected' directories to see how this works.
+
+BUILDING
+
+  Pick one of:
+
+  $ make gencon-sf
+
+  $ make gencon-vfx
+
+INSTALLATION
+
+  Place the resulting script/binary as 'gencon' in your path.
+
+  Rename it to 'gencon' in this directory to build the example.
+
+USAGE
+
+  gencon gencon.fs > gencon.c
+  gcc -o gencon gencon.c
+  ./gencon > constants.fs
+
+  'constant.fs' then is a pure Forth library that can be loaded and used with
+  code requiring those constants.
+
+USAGE (gforth)
+
+  gforth -e 'include path/to/gencon.fs include gencon.fs generate bye' > gencon.c
+  ... as above ...
+
+  You can run 'make gforth' in the example directory to build constants.fs with
+  gforth.
+
+WORDS (in your project gencon.fs files)
+
+  #include ( "TEXT" -- )
+    
+    resulting C code will have "#include TEXT"
+
+  c ( "CON" -- )
+
+    resulting C code will emit a Forth constant CON corresponding to the C
+    constant CON
+
+  code: ( "rest of line" -- )
+
+    resulting C code will include the rest of line, verbatim
+
+    Example usage, to name a Forth constant FORTH_PI for a C constant PI ,
+    instead of keeping the name:
+
+      code: con(FORTH_PI, PI);
+
+BUGS
+
+  VFX is really, really insistent on printing "Including blah" to stdout.
+
+  The example strips that out manually.
