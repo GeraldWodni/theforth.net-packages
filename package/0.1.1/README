@@ -1,0 +1,33 @@
+ABOUT
+
+  This package implements the following words from SwiftForth:
+
+    PACKAGE
+    PUBLIC
+    PRIVATE
+    END-PACKAGE
+    \\  (in compat libs)
+
+  Examples and further discussion of these words is included in package.fs
+
+COMPATABILITY
+
+  SwiftForth already implements these words
+
+  VFX Forth can load package.fs as is
+
+  GForth 0.7.9+ can load packages.fs after loading compat-gforth.fs
+  (NB. this version is due to N>R , not just {: :} )
+
+  iforth should load package-iforth.fs instead, which uses a separate wordlist
+  for PUBLIC PRIVATE END-PACKAGE in order to preserve the usual iforth meaning
+  of PRIVATE
+
+  ciforth:
+
+    1 LOAD WANT INCLUDE
+    WANT CASE-INSENSITIVE WORD :NONAME -ROT
+    ( for tests.fs: ) WANT DEFER
+    CASE-INSENSITIVE
+    include compat-ciforth.fs
+    include package.fs
