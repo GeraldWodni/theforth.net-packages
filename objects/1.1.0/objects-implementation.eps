@@ -1,0 +1,861 @@
+%!
+%%BoundingBox: 23 469 444 754
+%%Title: objects-implementation
+%%CreationDate: Wed Oct  7 21:10:06 1998
+%%Creator: Tgif-2.16-p12 by William Chia-Wei Cheng (william@cs.UCLA.edu)
+
+/tgifdict 5 dict def
+tgifdict begin
+
+/tgifarrowtipdict 8 dict def
+tgifarrowtipdict /mtrx matrix put
+
+/tgifarrowtip
+ { tgifarrowtipdict begin
+      /dy exch def
+      /dx exch def
+      /h exch def
+      /w exch def
+      /y exch def
+      /x exch def
+      /savematrix mtrx currentmatrix def
+      x y translate
+      dy dx atan rotate
+      0 0 moveto
+      w neg h lineto
+      w neg h neg lineto
+      savematrix setmatrix
+   end
+ } def
+
+/tgifcentertext { dup stringwidth pop 2 div neg 0 rmoveto } def
+
+/tgifrighttext { dup stringwidth pop neg 0 rmoveto } def
+
+end
+
+%%PageBoundingBox: 23 469 444 754
+tgifdict begin
+/tgifsavedpage save def
+
+1 setmiterlimit
+1 setlinewidth
+
+0 setgray
+
+72 0 mul 72 11.00 mul translate
+72 128 div 100 mul 100 div dup neg scale
+
+gsave
+
+% TEXT
+0 setgray
+/Helvetica-Bold findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      155 86 moveto (object) show
+   grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      155 90 moveto 210 90 lineto 210 110 lineto 155 110 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      155 110 moveto 210 110 lineto 210 130 lineto 155 130 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      155 130 moveto 210 130 lineto 210 150 lineto 155 150 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      150 106 moveto (interface-map) tgifrighttext show
+      150 126 moveto (class-parent) tgifrighttext show
+      150 146 moveto (class inst-size) tgifrighttext show
+   grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      160 395 moveto 220 395 lineto 220 415 lineto 160 415 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      160 415 moveto 220 415 lineto 220 435 lineto 160 435 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      160 435 moveto 220 435 lineto 220 455 lineto 160 455 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      155 411 moveto (interface-map) tgifrighttext show
+      155 431 moveto (class-parent) tgifrighttext show
+      155 451 moveto (class inst-size) tgifrighttext show
+   grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      355 90 moveto 410 90 lineto 410 110 lineto 355 110 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      355 110 moveto 410 110 lineto 410 130 lineto 355 130 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      355 130 moveto 410 130 lineto 410 150 lineto 355 150 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      415 106 moveto (class pointer) show
+      415 126 moveto (construct) show
+      415 146 moveto (print) show
+   grestore
+
+% POLY/OPEN-SPLINE
+0 setgray
+gsave
+   newpath
+      190 100 moveto
+      230.00 100.00 254.17 98.33 262.50 95.00 curveto
+      270.83 91.67 301.67 90.00
+      0 80 atan dup cos 8 mul 355 exch sub
+      exch sin 8 mul 90 exch sub curveto
+   stroke
+grestore
+gsave
+   newpath
+      355 90 8 3 80 0 tgifarrowtip
+   closepath fill
+grestore
+
+% POLY/OPEN-SPLINE
+0 setgray
+gsave
+   newpath
+      380 100 moveto
+      310.00 100.00 270.83 98.33 262.50 95.00 curveto
+      254.17 91.67 236.67 90.00
+      0 -40 atan dup cos 8 mul 210 exch sub
+      exch sin 8 mul 90 exch sub curveto
+   stroke
+grestore
+gsave
+   newpath
+      210 90 8 3 -40 0 tgifarrowtip
+   closepath fill
+grestore
+
+% POLY/OPEN-SPLINE
+0 setgray
+gsave
+   newpath
+      155 130 moveto
+      210 110 lineto
+   stroke
+grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      160 146 moveto (cell%) show
+   grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      380 126 moveto (' drop) tgifcentertext show
+      380 146 moveto (xt1) tgifcentertext show
+   grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      205 200 moveto 260 200 lineto 260 220 lineto 205 220 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      205 220 moveto 260 220 lineto 260 240 lineto 205 240 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      200 216 moveto (header) tgifrighttext show
+      200 236 moveto (object-map) tgifrighttext show
+   grestore
+
+% TEXT
+0 setgray
+/Helvetica-Bold findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      215 196 moveto (obj1) show
+   grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      225 216 moveto (...) show
+   grestore
+
+% POLY/OPEN-SPLINE
+0 setgray
+gsave
+   newpath
+      240 230 moveto
+      253.33 230.00 265.00 230.00 275.00 230.00 curveto
+      285.00 230.00 295.83 206.67 307.50 160.00 curveto
+      319.17 113.33 335.00 90.00
+      0 30 atan dup cos 8 mul 355 exch sub
+      exch sin 8 mul 90 exch sub curveto
+   stroke
+grestore
+gsave
+   newpath
+      355 90 8 3 30 0 tgifarrowtip
+   closepath fill
+grestore
+
+% TEXT
+0 setgray
+/Helvetica-Bold findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      175 391 moveto (cl1) show
+   grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      360 395 moveto 415 395 lineto 415 415 lineto 360 415 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      360 415 moveto 415 415 lineto 415 435 lineto 360 435 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      360 435 moveto 415 435 lineto 415 455 lineto 360 455 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      420 391 moveto (if1) show
+      420 411 moveto (class pointer) show
+      420 431 moveto (construct) show
+      420 451 moveto (print) show
+      420 471 moveto (cl1sel1) show
+   grestore
+
+% POLY/OPEN-SPLINE
+0 setgray
+gsave
+   newpath
+      198 405 moveto
+      236.00 405.00 264.17 400.00 282.50 390.00 curveto
+      300.83 380.00 326.67 375.00
+      0 50 atan dup cos 8 mul 360 exch sub
+      exch sin 8 mul 375 exch sub curveto
+   stroke
+grestore
+gsave
+   newpath
+      360 375 8 3 50 0 tgifarrowtip
+   closepath fill
+grestore
+
+% POLY/OPEN-SPLINE
+0 setgray
+gsave
+   newpath
+      385 405 moveto
+      315.00 405.00 275.83 403.33 267.50 400.00 curveto
+      259.17 396.67 243.33 395.00
+      0 -35 atan dup cos 8 mul 220 exch sub
+      exch sin 8 mul 395 exch sub curveto
+   stroke
+grestore
+gsave
+   newpath
+      220 395 8 3 -35 0 tgifarrowtip
+   closepath fill
+grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      385 431 moveto (' m1) tgifcentertext show
+      385 451 moveto (xt1) tgifcentertext show
+      385 471 moveto (' m4) tgifcentertext show
+   grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      360 375 moveto 415 375 lineto 415 395 lineto 360 395 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      680 380 moveto 735 380 lineto 735 400 lineto 680 400 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      680 400 moveto 735 400 lineto 735 420 lineto 680 420 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      740 396 moveto (if1sel1) show
+      740 416 moveto (if1sel2) show
+   grestore
+
+% POLY/OPEN-SPLINE
+0 setgray
+gsave
+   newpath
+      390 385 moveto
+      410.00 355.00 448.33 343.33 505.00 350.00 curveto
+      561.67 356.67 620.00 360.00
+      0 90 atan dup cos 8 mul 680 exch sub
+      exch sin 8 mul 360 exch sub curveto
+   stroke
+grestore
+gsave
+   newpath
+      680 360 8 3 90 0 tgifarrowtip
+   closepath fill
+grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      705 396 moveto (' m2) tgifcentertext show
+      705 416 moveto (' m3) tgifcentertext show
+   grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      360 455 moveto 415 455 lineto 415 475 lineto 360 475 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% POLY/OPEN-SPLINE
+0 setgray
+gsave
+   newpath
+      198 425 moveto
+      209.33 425.00 221.67 417.50 235.00 402.50 curveto
+      248.33 387.50 266.67 351.67 290.00 295.00 curveto
+      313.33 238.33 312.50 190.00 287.50 150.00 curveto
+      262.50 110.00 236.67 90.00
+      0 -40 atan dup cos 8 mul 210 exch sub
+      exch sin 8 mul 90 exch sub curveto
+   stroke
+grestore
+gsave
+   newpath
+      210 90 8 3 -40 0 tgifarrowtip
+   closepath fill
+grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      190 451 moveto (cell% 2*) tgifcentertext show
+   grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      210 505 moveto 265 505 lineto 265 525 lineto 210 525 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      210 525 moveto 265 525 lineto 265 545 lineto 210 545 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      205 521 moveto (header) tgifrighttext show
+      205 541 moveto (object-map) tgifrighttext show
+      205 561 moveto (cl1iv1) tgifrighttext show
+   grestore
+
+% TEXT
+0 setgray
+/Helvetica-Bold findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      220 501 moveto (obj2) show
+   grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      230 521 moveto (...) show
+   grestore
+
+% POLY/OPEN-SPLINE
+0 setgray
+gsave
+   newpath
+      245 535 moveto
+      258.33 535.00 270.00 535.00 280.00 535.00 curveto
+      290.00 535.00 300.83 511.67 312.50 465.00 curveto
+      324.17 418.33 340.00 395.00
+      0 30 atan dup cos 8 mul 360 exch sub
+      exch sin 8 mul 395 exch sub curveto
+   stroke
+grestore
+gsave
+   newpath
+      360 395 8 3 30 0 tgifarrowtip
+   closepath fill
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      210 545 moveto 265 545 lineto 265 565 lineto 210 565 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      485 510 moveto 545 510 lineto 545 530 lineto 485 530 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      485 530 moveto 545 530 lineto 545 550 lineto 485 550 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      480 526 moveto (header) tgifrighttext show
+      480 546 moveto (selector-offset) tgifrighttext show
+      480 566 moveto (selector-interface) tgifrighttext show
+   grestore
+
+% TEXT
+0 setgray
+/Helvetica-Bold findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      515 506 moveto (cl1sel1) tgifcentertext show
+   grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      515 526 moveto (...) tgifcentertext show
+      515 546 moveto (12) tgifcentertext show
+      515 566 moveto (0\(class\)) tgifcentertext show
+   grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      485 550 moveto 545 550 lineto 545 570 lineto 485 570 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      680 360 moveto 735 360 lineto 735 380 lineto 680 380 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      505 185 moveto 560 185 lineto 560 205 lineto 505 205 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      505 205 moveto 560 205 lineto 560 225 lineto 505 225 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      500 201 moveto (header) tgifrighttext show
+      500 221 moveto (selector-offset) tgifrighttext show
+      500 241 moveto (selector-interface) tgifrighttext show
+   grestore
+
+% TEXT
+0 setgray
+/Helvetica-Bold findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      535 181 moveto (if1sel1) tgifcentertext show
+   grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      530 201 moveto (...) tgifcentertext show
+      530 221 moveto (0) tgifcentertext show
+      530 241 moveto (-4) tgifcentertext show
+   grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      505 225 moveto 560 225 lineto 560 245 lineto 505 245 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      705 185 moveto 760 185 lineto 760 205 lineto 705 205 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      705 205 moveto 760 205 lineto 760 225 lineto 705 225 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      700 201 moveto (header) tgifrighttext show
+      700 221 moveto (selector-offset) tgifrighttext show
+      700 241 moveto (selector-interface) tgifrighttext show
+   grestore
+
+% TEXT
+0 setgray
+/Helvetica-Bold findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      735 181 moveto (if1sel2) tgifcentertext show
+   grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      730 201 moveto (...) tgifcentertext show
+      730 221 moveto (4) tgifcentertext show
+      730 241 moveto (-4) tgifcentertext show
+   grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      705 225 moveto 760 225 lineto 760 245 lineto 705 245 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      490 290 moveto 545 290 lineto 545 310 lineto 490 310 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      485 306 moveto (interface-map) tgifrighttext show
+   grestore
+
+% TEXT
+0 setgray
+/Helvetica-Bold findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      505 286 moveto (if1) show
+   grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      680 300 moveto 735 300 lineto 735 320 lineto 680 320 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      680 320 moveto 735 320 lineto 735 340 lineto 680 340 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% POLY/OPEN-SPLINE
+0 setgray
+gsave
+   newpath
+      515 300 moveto
+      555.00 300.00 585.00 296.67 605.00 290.00 curveto
+      625.00 283.33 650.00 280.00
+      0 45 atan dup cos 8 mul 680 exch sub
+      exch sin 8 mul 280 exch sub curveto
+   stroke
+grestore
+gsave
+   newpath
+      680 280 8 3 45 0 tgifarrowtip
+   closepath fill
+grestore
+
+% TEXT
+0 setgray
+/Helvetica findfont [17 0 0 -17 0 0] makefont setfont
+   gsave
+      740 316 moveto (if1sel1) show
+      740 336 moveto (if1sel2) show
+   grestore
+
+% POLY/OPEN-SPLINE
+0 setgray
+gsave
+   newpath
+      680 320 moveto
+      735 300 lineto
+   stroke
+grestore
+
+% POLY/OPEN-SPLINE
+0 setgray
+gsave
+   newpath
+      680 340 moveto
+      735 320 lineto
+   stroke
+grestore
+
+% BOX
+0 setgray
+gsave
+   1.415 setmiterlimit
+   newpath
+      680 280 moveto 735 280 lineto 735 300 lineto 680 300 lineto
+   closepath stroke
+   1 setmiterlimit
+grestore
+
+% POLY/OPEN-SPLINE
+0 setgray
+gsave
+   newpath
+      710 290 moveto
+      0 -165 atan dup cos 8 mul 545 exch sub
+      exch sin 8 mul 290 exch sub lineto
+   stroke
+grestore
+gsave
+   newpath
+      545 290 8 3 -165 0 tgifarrowtip
+   closepath fill
+grestore
+
+% POLY/OPEN-SPLINE
+0 setgray
+gsave
+   newpath
+      710 370 moveto
+      653.33 370.00 621.67 356.67 615.00 330.00 curveto
+      608.33 303.33 585.00 290.00
+      0 -60 atan dup cos 8 mul 545 exch sub
+      exch sin 8 mul 290 exch sub curveto
+   stroke
+grestore
+gsave
+   newpath
+      545 290 8 3 -60 0 tgifarrowtip
+   closepath fill
+grestore
+
+grestore
+tgifsavedpage restore
+end
+%MatchingCreationDate: Wed Oct  7 21:10:06 1998

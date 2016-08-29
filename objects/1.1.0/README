@@ -1,0 +1,47 @@
+This directory contains my structure and objects packages for Forth
+and articles about them.
+
+The files are:
+
+struct.fs	the structures package
+objects.fs	the objects package
+objexamp.fs	test code for the objects package
+fifo-example.fs	a more elaborate example using the package
+structs.html	Documentation on the structure package
+objects.html	Documentation on the objects package
+opinion.html	my opinion on the Neon model and about standardizing OO Forth
+
+You can get this whole directory from
+http://www.complang.tuwien.ac.at/forth/objects.zip.
+
+You can test the package by loading struct.fs, then objects,fs, then
+objexamp.fs. The output should look similar to this:
+------------
+object:5368720608 class:209016 
+undefined
+0 1 4 4 
+object:5368720672 class:209728 
+object:5368720672 class:209728 
+??? ??? Forth Forth Root     ??? 
+??? ??? Forth Forth Root     Forth 
+3 
+xcounter object:211856 class:210744 made another ten
+xcounter object:211856 class:210744 made another ten
+20 23 
+??? ??? Forth Forth Root     Forth 
+
+protected2  protected1  n  
+Forth Forth Root     Forth 
+
+0 
+0 
+2 
+4
+5 6 
+<0> 
+-------------
+- anton
+--
+M. Anton Ertl                    Some things have to be seen to be believed
+anton@mips.complang.tuwien.ac.at Most things have to be believed to be seen
+http://www.complang.tuwien.ac.at/anton/home.html
