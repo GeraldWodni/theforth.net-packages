@@ -1,0 +1,212 @@
+<title>On Standardizing Object-Oriented Forth Extensions</title>
+
+<h1>On Standardizing Object-Oriented Forth Extensions</h1>
+
+<h2>Standardization and Libraries</h2>
+
+Andrew McKewan argues that we need to agree on (i.e., standardize) one
+model to start building an object-oriented library.  My view is just
+the reverse: If someone writes a good object-oriented library that
+everyone wants to use, we will all use the object model on which that
+library is based; that model will become a de-facto standard and
+finally a de-jure standard.
+
+<p>Andrew McKewan uses the Forth scientific library (FSL) as
+example. He argues that it was necessary to standardize floating-point
+in ANS Forth before the FSL could be written. Even if that were true
+(of which I am not convinced), the cases differ significantly: A
+floating-point implementation written in Forth-83 would have been
+unacceptably slow for many purposes; OTOH, many object-oriented models
+can be implemented in standard Forth efficiently enough to be
+useful. (BTW, this is a major strength of Forth over many other
+languages: C, Pascal, Ada etc. require language changes and new
+compilers to accomodate object-oriented programming; in Forth every
+programmer can do it.)
+
+<p>As a counter-example, consider the case of locals: Even though the
+commitee standardized the syntax <code>LOCALS| this read can you
+|</code>, many people use the syntax <code>{ you can read this
+}</code>. This syntax can be implemented without performance penalty
+in standard Forth (<a href="#hayes92">[hayes92]</a>, <a
+href="http://www.complang.tuwien.ac.at/forth/anslocal.fs">http://www.complang.tuwien.ac.at/forth/anslocal.fs</a>).
+
+<p>What would such an object-oriented library look like? It should
+have as few system dependences as possible. This excludes libraries
+for dealing with windowing systems, which appear to be the most
+popular application of object-oriented technology in Forth. The
+library should deal with problems that are hard enough to make
+reinventing the wheel unattractive.  A look at the standard libraries
+of other object-oriented languages should provide some inspiration.
+
+<h2>Consensus</h2>
+
+The major problem with standardizing an object-oriented model by
+agreeing on one is that there is no consensus. There was a discussion
+of this topic on <a href="news:comp.lang.forth">comp.lang.forth</a>
+(Subject: Objects for ANS Forth) in August 1996.  <a
+href="#rodriguez&poehlman96">[rodriguez&poehlman96]</a> lists 17
+object-oriented extensions for Forth, and this does not include
+several that were discussed on <a
+href="news:comp.lang.forth">comp.lang.forth</a>.
+
+<p>OTOH, what's so bad about having no standard object model? We don't
+have a standard array or structure model, either, because we can build
+what we need when we need it, at little cost.
+
+<h2>The Neon Model</h2>
+
+I cannot create a synopsis of the complete discussion, therefore I'll
+restrict myself to the points relevant to the Neon/Yerk model (as
+presented in <a href="#mckewan97">[mckewan97]</a>), which is also
+implemented in Mops, Win32Forth and in ANS Forth <a
+href="#mckewan97">[mckewan97]</a> (as presented in <a
+href="#mckewan97">[mckewan97]</a>). This model currently (in 1998)
+appears to be the most popular one.  The points under discussion were:
+
+<ul>
+
+<li>The Neon model uses a <code><em>selector object</em></code>
+syntax, which makes it unnatural to pass objects on the stack. This
+syntax could make it easy to pass the selector on the stack, but that
+is rarely needed (and the Neon model makes it hard to pass the
+selector anyway, see below).
+
+<p>The Neon model  uses the following
+syntax for dealing with objects passed on the stack:
+<pre>
+<em>selector</em> [ <em>code</em> ]
+</pre>
+
+<code><em>code</em></code> must produce an object reference, which is
+then consumed by the whole construction.  This syntax reduces the
+extensibility (see below), and offers no advantage over the more
+conventional (and therefore easier to learn) syntax
+
+<pre>
+<em>code selector</em>
+</pre>
+
+You can also use
+
+<pre>
+<em>code selector</em> [ ]
+</pre>
+
+in the Neon model.  But that's just more complex; and mixing this
+syntax with the other variants makes the usage less consistent and
+thus harder to read.
+
+<li>The Neon model requires that the selector parses the input stream
+(at compile-time). This leads to reduced extensibility and to bugs
+that are hard to find.
+
+<p>E.g., suppose for some reason that you want to tick a selector to
+get an execution token that you can <code>EXECUTE</code> or
+<code>COMPILE,</code> later. How do you pass the object to that
+selector? You cannot use the natural way: to pass it on the stack;
+instead, you have to manipulate the input stream.  (Charles Melice
+pointed out that you can get an xt for a word that takes an object on
+the stack and passes it to a selector in the following way:
+<code>:noname selector: [ ] ;</code>).
+
+<p>Once you have managed to deal with the input stream, the real
+trouble starts: All selectors defined with McKewan's implementation of
+the Neon model are state-smart.  I.e., what they do, depends on the
+contents of <code>STATE</code> when the selector is invoked. So you
+have to make sure to set <code>STATE</code> right for every place
+where such a selector might be invoked. If you fail in that, the
+resulting bug usually is hard to find.
+
+<p>This should demonstrate the trouble with parsing words in general
+and with the Neon model in particular.
+
+<p>We could choose to forbid ticking (and <code>POSTPONE</code>ing)
+selectors, or we could choose a model that does not have this
+problem.</p>
+
+<li>The Neon model is inefficient in the general case.
+
+<p>The Neon model allows sending (a message with) any selector to
+any object (let's call such models Smalltalk-like). This is considered
+essential by some. However, it also makes it harder to create
+efficient implementations.
+
+<p>In contrast, some models (let's call them Java-like) allow sending
+ only those selectors to an object that were explicitly defined for
+the class of the object or its ancestor classes. Some also have
+<em>multiple inheritance</em> or Java-like <em>interfaces</em>.
+
+<p>In practice, you can program the same things with the
+Smalltalk-like and Java-like models. In the Java-like models, you have
+to define the selector in a common ancestor class (or common
+interface) of all objects that use the selector. If you fail to do
+this, and send a message to an object, for which the selector was not
+defined, the result in a straightforward implementation of a Java-like
+model is a crash or the invocation of an unrelated method (with a
+little additional code and run-time overhead, a Java-like model can
+produce a decent error message in this case, though); in contrast,
+with a Smalltalk-like model you get a run-time error (<tt>message not
+understood</tt>).
+
+<p>Concerning implementation, a Java-like model can be implemented
+easily and efficiently using a technique that C++ implementors call
+<em>virtual function tables</em>. For a Smalltalk-like model on an
+interactive system like Forth, using virtual function tables is much
+harder <a href="#vitek&horspool96">[vitek&horspool96]</a>. Indeed,
+AFAIK, no Smalltalk-like Forth extension uses virtual function tables;
+they all use searching methods that are significantly slower.<!--
+McKewan-Posting-->
+
+<p>Proponents of Smalltalk-like models argue that most selector
+lookups can be resolved at compile-time, eliminating the searching
+overhead.  However, studies of programs written in full
+object-oriented style (in other languages) show that message sends
+occur every 60 instructions (median), and even complex analysis
+algorithms leave a significant number of them unresolved (usually,
+because the message send actually does invoke different methods at
+run-time) <a href="#diwan+96">[diwan+96]</a>.
+
+</ul>
+
+We can make the Neon model standard (after all, we can still implement
+the others in plain Forth), but if we do so, we should be aware of its
+properties.
+
+<h2>References</h2>
+
+<!-- bibhtml:start -->
+<dl>
+
+<dt><a name="diwan+96">[diwan+96] Amer Diwan, J. Eliot B. Moss, and Kathryn S.
+  McKinley.</a></dt> <dd>
+  Simple and effective analysis of statically-typed object-oriented programs.
+  In <em>Conference on Object-Oriented Programming Systems, Languages \&
+  Applications (OOPSLA '96)</em>, pages 292-305, 1996.
+</dd>
+
+<dt><a name="hayes92">[hayes92] John R. Hayes.</a></dt> <dd>
+  User-defined local variable syntax with ANS Forth.
+  <em>SigForth Newsletter</em>, <b>4</b> no. 2, 1992.
+</dd>
+
+<dt><a name="mckewan97">[mckewan97] Andrew McKewan.</a></dt> <dd>
+  Object-oriented programming in ANS Forth.
+  <em>Forth Dimensions</em>, March 1997.
+</dd>
+
+<dt><a name="rodriguez&poehlman96">[rodriguez&poehlman96] Bradford J. Rodriguez
+  and W. F. S. Poehlman.</a></dt> <dd>
+  <a href="http://www.zetetics.com/bj/papers/oofs.htm" >A survey of
+  object-oriented Forths</a>.
+  <em>SIGPLAN Notices</em>, pages 39-42, April 1996.
+</dd>
+
+<dt><a name="vitek&horspool96">[vitek&horspool96] Jan Vitek and R. Nigel
+  Horspool.</a></dt> <dd>
+  Compact dispatch tables for dynamically typed object oriented languages.
+  In Tibor Gyim\'othy, editor, <em>Compiler Construction (CC'96)</em>, pages
+  309-325, Link\"oping, 1996. Springer LNCS 1060.
+</dd>
+
+</dl>
+<!-- bibhtml:end -->

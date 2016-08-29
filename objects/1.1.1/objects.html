@@ -1,0 +1,867 @@
+<title>Yet another Forth objects package</title>
+
+<h1>Yet another Forth objects package</h1>
+
+After criticizing the Neon model in <a href="opinion.html">the last
+issue</a>, here I present (and expose to criticism) a model that I
+find better, and its implementation. Its properties (most are
+advantages IMO) are:
+
+<ul>
+
+<li>It is straightforward to pass objects on the stack. Passing
+selectors on the stack is a little less convenient, but possible.
+
+<li>Objects are just data structures in memory, and are referenced by
+their address. You can create words for objects with normal defining
+words like <code>constant</code>. Likewise, there is no difference
+between instance variables that contain objects and those
+that contain other data.
+
+<li>Late binding is efficient and easy to use.
+
+<li>It avoids parsing, and thus avoids problems with state-smartness
+and reduced extensibility; for convenience there are a few parsing
+words, but they have non-parsing counterparts. There are also a few
+defining words that parse. This is hard to avoid, because all standard
+defining words parse (except <code>:noname</code>); however, such
+words are not as bad as many other parsing words, because they are not
+state-smart.
+
+<li>It does not try to incorporate everything. It does a few things
+and does them well (IMO). In particular, I did not intend to support
+information hiding with this model (although it has features that may
+help); you can use a separate package for achieving this.
+
+<li>It is layered; you don't have to learn and use all features to use
+this model. In particular, the features discussed after the Section
+<em>Programming Style</em> are are optional and independent of each
+other.
+
+<li>An implementation in ANS Forth is available.
+
+</ul>
+
+I have used the technique, on which this model is based, for
+implementing Gray <a href="#ertl89">[ertl89]</a><a
+href="#ertl97">[ertl97]</a>; we have also used this technique in
+Gforth.
+
+<p>This paper assumes (in some places) that you have read the <a
+href="structs.html">paper on structures</a>.
+
+<h2>Why object-oriented programming?</h2>
+
+Often we have to deal with several data structures (<em>objects</em>),
+that have to be treated similarly in some respects, but differ in
+others. Graphical objects are the textbook example: circles,
+triangles, dinosaurs, icons, and others, and we may want to add more
+during program development. We want to apply some operations to any
+graphical object, e.g., <code>draw</code> for displaying it on the
+screen. However, <code>draw</code> has to do something different for
+every kind of object.
+
+<p>We could implement <code>draw</code> as a big <code>CASE</code>
+control structure that executes the appropriate code depending on the
+kind of object to be drawn. This would be not be very elegant, and,
+moreover, we would have to change <code>draw</code> every time we add
+a new kind of graphical object (say, a spaceship).
+
+<p>What we would rather do is: When defining spaceships, we would tell
+the system: "Here's how you <code>draw</code> a spaceship; you figure
+out the rest."
+
+<p>This is the problem that all systems solve that (rightfully) call
+themselves object-oriented, and the object-oriented package I present
+here also solves this problem (and not much else).
+
+<h2>Terminology</h2>
+
+This section is mainly for reference, so you don't have to understand
+all of it right away. I (mostly) use the same Smalltalk-inspired
+terminology as <a href="#mckewan97">[mckewan97]</a>.  In short:
+
+<dl>
+
+<dt>class <dd>a data structure definition with some extras.
+
+<dt>object
+<dd>an instance of the data structure described by the class definition.
+
+<dt>instance variables
+<dd>fields of the data structure.
+
+<dt>selector <dd>(or <em>method selector</em>) a word (e.g.,
+<code>draw</code>) for performing an operation on a variety of data
+structures (classes). A selector describes <em>what</em> operation to
+perform. In C++ terminology: a (pure) virtual function.
+
+<dt>method <dd>the concrete definition that performs the operation
+described by the selector for a specific class. A method specifies
+<em>how</em> the operation is performed for a specific class.
+
+<dt>selector invocation <dd>a call of a selector. One argument of the
+call (the TOS (top-of-stack)) is used for determining which method is used. In Smalltalk
+terminology: a message (consisting of the selector and the other
+arguments) is sent to the object.
+
+<dt>receiving object <dd>the object used for determining the method
+executed by a selector invocation. In our model it is the object that
+is on the TOS when the selector is invoked. (<em>Receiving</em> comes
+from Smalltalks <em>message</em> terminology.)
+
+<dt>child class <dd>a class that has (<em>inherits</em>) all
+properties (instance variables, selectors, methods) from a <em>parent
+class</em>. In Smalltalk terminology: The subclass inherits from the
+superclass. In C++ terminology: The derived class inherits from the
+base class.
+
+</dl>
+
+<!--If you wonder about the message sending terminology, it comes from
+a time when each object had it's own task and objects communicated via
+message passing; eventually the Smalltalk developers realized that
+they can do most things through simple (indirect) calls. They kept the
+terminology.-->
+
+<h2>Basic Usage</h2>
+
+You can define a class for graphical objects like this:
+
+<pre>
+object class \ "object" is the parent class
+  selector draw ( x y graphical -- )
+end-class graphical
+</pre>
+
+This code defines a class <code>graphical</code> with an
+operation <code>draw</code>.  We can perform the operation
+<code>draw</code> on any <code>graphical</code> object, e.g.:
+
+<pre>
+100 100 t-rex draw
+</pre>
+
+where <code>t-rex</code> is a word (say, a constant) that produces a
+graphical object.
+
+<p>How do we create a graphical object? With the present definitions,
+we cannot create a useful graphical object. The class
+<code>graphical</code> describes graphical objects in general, but not
+any concrete graphical object type (C++ users would call it an
+<em>abstract class</em>); e.g., there is no method for the selector
+<code>draw</code> in the class <code>graphical</code>.
+
+<p>For concrete graphical objects, we define child classes of the
+class <code>graphical</code>, e.g.:
+
+<pre>
+graphical class \ "graphical" is the parent class
+  cell% field circle-radius
+
+:noname ( x y circle -- )
+  circle-radius @ draw-circle ;
+overrides draw
+
+:noname ( n-radius circle -- )
+  circle-radius ! ;
+overrides construct
+
+end-class circle
+</pre>
+
+Here we define a class <code>circle</code> as a child of
+<code>graphical</code>, with a field <code>circle-radius</code> (which
+behaves just like a field in <a href="structs.html">the structure
+package</a>); it defines new methods for the selectors
+<code>draw</code> and <code>construct</code> (<code>construct</code>
+is defined in <code>object</code>, the parent class of
+<code>graphical</code>).
+
+<p>Now we can create a circle on the heap (i.e.,
+<code>allocate</code>d memory) with
+
+<pre>
+50 circle heap-new constant my-circle
+</pre>
+
+<code>heap-new</code> invokes <code>construct</code>, thus
+initializing the field <code>circle-radius</code> with 50. We can draw
+this new circle at (100,100) with
+
+<pre>
+100 100 my-circle draw
+</pre>
+
+Note: You can invoke a selector only if the object on the TOS
+(the receiving object) belongs to the class where the selector was
+defined or one of its descendents; e.g., you can invoke
+<code>draw</code> only for objects belonging to <code>graphical</code>
+or its descendents (e.g., <code>circle</code>).  Immediately before
+<code>end-class</code>, the search order has to be the same as
+immediately after <code>class</code>.
+
+<h2>The <code>object</code> class</h2>
+
+When you define a class, you have to specify a parent class.  So how
+do you start defining classes? There is one class available from the
+start: <code>object</code>. You can use it as ancestor for all
+classes. It is the only class that has no parent. It has two
+selectors: <code>construct</code> and <code>print</code>.
+
+<h2>Creating objects</h2>
+
+You can create and initialize an object of a class on the heap with
+<code>heap-new</code> ( ... class -- object ) and in the dictionary
+(allocation with <code>allot</code>) with <code>dict-new</code> (
+... class -- object ). Both words invoke <code>construct</code>, which
+consumes the stack items indicated by "..." above.
+
+<p>If you want to allocate memory for an object yourself, you can get its
+alignment and size with <code>class-inst-size 2@</code> ( class --
+align size ). Once you have memory for an object, you can initialize
+it with <code>init-object</code> ( ... class object -- );
+<code>construct</code> does only a part of the necessary work.
+
+<h2>Programming style</h2>
+
+This section is not exhaustive.
+
+<p>In general, it is a good idea to ensure that all methods for the
+same selector have the same stack effect: when you invoke a selector,
+you often have no idea which method will be invoked, so, unless all
+methods have the same stack effect, you will not know the stack effect
+of the selector invocation.
+
+<p>One exception to this rule is methods for the selector
+<code>construct</code>. We know which method is invoked, because we
+specify the class to be constructed at the same place. Actually, I
+defined <code>construct</code> as a selector only to give the users a
+convenient way to specify initialization. The way it is used, a
+mechanism different from selector invocation would be more natural
+(but probably would take more code and more space to explain).
+
+<h2>Class Binding</h2>
+
+Normal selector invocations determine the method at run-time depending
+on the class of the receiving object (late binding).
+
+<p>Sometimes we want to invoke a different method. E.g., assume that
+you want to use the simple method for <code>print</code>ing
+<code>object</code>s instead of the possibly long-winded
+<code>print</code> method of the receiver class. You can achieve this
+by replacing the invocation of <code>print</code> with
+
+<pre>
+[bind] object print
+</pre>
+
+in compiled code or
+
+<pre>
+bind object print
+</pre>
+
+in interpreted code. Alternatively, you can define the method with a
+name (e.g., <code>print-object</code>), and then invoke it through the
+name. Class binding is just a (often more convenient) way to achieve
+the same effect; it avoids name clutter and allows you to invoke
+methods directly without naming them first.
+
+<p>A frequent use of class binding is this: When we define a method
+for a selector, we often want the method to do what the selector does
+in the parent class, and a little more. There is a special word for
+this purpose: <code>[parent]</code>; <code>[parent]
+<em>selector</em></code> is equivalent to <code>[bind] <em>parent
+selector</em></code>, where <code><em>parent</em></code> is the parent
+class of the current class. E.g., a method definition might look like:
+
+<pre>
+:noname
+  dup [parent] foo \ do parent's foo on the receiving object
+  ... \ do some more
+; overrides foo
+</pre>
+
+<p><a href="#mckewan97">[mckewan97]</a> presents class binding as an optimization technique. I
+recommend not using it for this purpose unless you are in an
+emergency. Late binding is pretty fast with this model anyway, so the
+benefit of using class binding is small; the cost of using class
+binding where it is not appropriate is reduced maintainability.
+
+<p>While we are at programming style questions: You should bind
+selectors only to ancestor classes of the receiving object. E.g., say,
+you know that the receiving object is of class <code>foo</code> or its
+descendents; then you should bind only to <code>foo</code> and its
+ancestors.
+
+<h2>Method conveniences</h2>
+
+In a method you usually access the receiving object pretty often.  If
+you define the method as a plain colon definition (e.g., with
+<code>:noname</code>), you may have to do a lot of stack
+gymnastics. To avoid this, you can define the method with <code>m:
+... ;m</code>. E.g., you could define the method for
+<code>draw</code>ing a <code>circle</code> with
+
+<pre>
+m: ( x y circle -- )
+  ( x y ) this circle-radius @ draw-circle ;m
+</pre>
+
+When this method is executed, the receiver object is removed from the
+stack; you can access it with <code>this</code> (admittedly, in this
+example the use of <code>m: ... ;m</code> offers no advantage). Note
+that I specify the stack effect for the whole method (i.e. including
+the receiver object), not just for the code between <code>m:</code>
+and <code>;m</code>. You cannot use <code>exit</code> in
+<code>m:...;m</code>; instead, use
+<code>exitm</code>. <!--footnote-->Moreover, for any word that calls
+<code>catch</code> and was defined before loading
+<code>objects.fs</code>, you have to redefine it like I redefined
+<code>catch</code>:
+
+<pre>
+: catch this >r catch r> to-this ;
+</pre>
+<!-- end footnote -->
+
+<p>You will frequently use sequences of the form <code>this
+<em>field</em></code> (in the example above: <code>this
+circle-radius</code>). If you use the field only in this way, you can
+define it with <code>inst-var</code> and eliminate the
+<code>this</code> before the field name. E.g., the <code>circle</code>
+class above could also be defined with:
+
+<pre>
+graphical class
+  cell% inst-var radius
+
+m: ( x y circle -- )
+  radius @ draw-circle ;m
+overrides draw
+
+m: ( n-radius circle -- )
+  radius ! ;m
+overrides construct
+
+end-class circle
+</pre>
+
+<code>radius</code> can only be used in <code>circle</code> and its
+descendent classes and inside <code>m:...;m</code>.
+
+<p>You can also define fields with <code>inst-value</code>, which is
+to <code>inst-var</code> what <code>value</code> is to
+<code>variable</code>.  You can change the value of such a field with
+<code>[to-inst]</code>.  E.g., we could also define the class
+<code>circle</code> like this:
+
+<pre>
+graphical class
+  inst-value radius
+
+m: ( x y circle -- )
+  radius draw-circle ;m
+overrides draw
+
+m: ( n-radius circle -- )
+  [to-inst] radius ;m
+overrides construct
+
+end-class circle
+</pre>
+
+
+<h2>Names and Scoping</h2>
+
+Inheritance is frequent, unlike structure extension. This exacerbates
+the problem with the field name convention: One always has to remember
+in which class the field was originally defined; changing a part of
+the class structure would require changes for renaming in otherwise
+unaffected code.
+
+<p>To solve this problem, I added a scoping mechanism (which was not
+in my original charter): A field defined with <code>inst-var</code> is
+visible only in the class where it is defined and in the descendent
+classes of this class.  Using such fields only makes sense in
+<code>m:</code>-defined methods in these classes anyway.
+
+<p>This scoping mechanism allows us to use the unadorned field name,
+because name clashes with unrelated words become much less likely.
+
+<p>Once we have this mechanism, we can also use it for controlling the
+visibility of other words: All words defined after
+<code>protected</code> are visible only in the current class and its
+descendents. <code>public</code> restores the compilation
+(i.e. <code>current</code>) wordlist that was in effect before. If you
+have several <code>protected</code>s without an intervening
+<code>public</code> or <code>set-current</code>, <code>public</code>
+will restore the compilation wordlist in effect before the first of
+these <code>protected</code>s.
+
+<h2>Interfaces</h2>
+
+In this model you can only call selectors defined in the class of the
+receiving objects or in one of its ancestors. If you call a selector
+with a receiving object that is not in one of these classes, the
+result is undefined; if you are lucky, the program crashes
+immediately.
+
+<p>Now consider the case when you want to have a selector (or several)
+available in two classes: You would have to add the selector to a
+common ancestor class, in the worst case to <code>object</code>. You
+may not want to do this, e.g., because someone else is responsible for
+this ancestor class.
+
+<p>The solution for this problem is interfaces. An interface is a
+collection of selectors. If a class implements an interface, the
+selectors become available to the class and its descendents. A class
+can implement an unlimited number of interfaces. For the problem
+discussed above, we would define an interface for the selector(s), and
+both classes would implement the interface.
+
+<p>As an example, consider an interface <code>storage</code> for
+writing objects to disk and getting them back, and a class
+<code>foo</code> foo that implements it. The code for this would look
+like this:
+
+<pre>
+interface
+  selector write ( file object -- )
+  selector read1 ( file object -- )
+end-interface storage
+
+bar class
+  storage implementation
+
+... overrides write
+... overrides read
+...
+end-class foo
+</pre>
+
+(I would add a word <code>read</code> ( file -- object ) that uses
+<code>read1</code> internally, but that's beyond the point illustrated
+here.)
+
+<p>Note that you cannot use <code>protected</code> in an interface; and
+of course you cannot define fields.
+
+<p>In the Neon model, all selectors are available for all classes;
+therefore it does not need interfaces. The price you pay in this model
+is slower late binding, and therefore, added complexity to avoid late
+binding.
+
+<h2>Persistence</h2>
+
+The internal data of classes and interfaces are stored in the
+dictionary, so they survive the usual system-saving and reloading
+mechanisms of Forth systems.  For objects, it's up to you to save them
+in the dictionary if you want them to survive.
+
+<h2>Implementation</h2>
+
+An object is a piece of memory, like one of the data structures
+described with <code>struct...end-struct</code>. It has a field
+<code>object-map</code> that points to the method map for the object's
+class.
+
+<p>The <em>method map</em> (<!--footnote-->this is Self
+<a href="#chambers&ungar89">[chambers&ungar89]</a> terminology; in C++ terminology: virtual function
+table) is an array that contains the execution tokens (XTs) of the
+methods for the object's class. Each selector contains an offset into
+the method maps.
+
+<p><code>selector</code> is a defining word that uses
+<code>create</code> and <code>does&gt;</code>. The body of the
+selector contains the offset; the <code>does&gt;</code> action for a
+class selector is, basically:
+
+<pre>
+( object addr ) @ over object-map @ + @ execute
+</pre>
+
+Since <code>object-map</code> is the first field of the object, it
+does not generate any code. As you can see, calling a selector has a
+small, constant cost.
+
+<p>A class is basically a <code>struct</code> combined with a method
+map. During the class definition the alignment and size of the class
+are passed on the stack, just as with <code>struct</code>s, so
+<code>field</code> can also be used for defining class
+fields. However, passing more items on the stack would be
+inconvenient, so <code>class</code> builds a data structure in memory,
+which is accessed through the variable
+<code>current-interface</code>. After its definition is complete, the
+class is represented on the stack by a pointer (e.g., as parameter for
+a child class definition).
+
+<p>At the start, a new class has the alignment and size of its parent,
+and a copy of the parent's method map. Defining new fields extends the
+size and alignment; likewise, defining new selectors extends the
+method map. <code>overrides</code> just stores a new XT in the method
+map at the offset given by the selector.
+
+<p>Class binding just gets the XT at the offset given by the selector
+from the class's method map and <code>compile,</code>s (in the case of
+<code>[bind]</code>) it.
+
+<p>I implemented <code>this</code> as a <code>value</code>. At the
+start of an <code>m:...;m</code> method the old <code>this</code> is
+stored to the return stack and restored at the end; and the object on
+the TOS is stored <code>TO this</code>. This technique has one
+disadvantage: If the user does not leave the method via
+<code>;m</code>, but via <code>throw</code> or <code>exit</code>,
+<code>this</code> is not restored (and <code>exit</code> may
+crash). To deal with the <code>throw</code> problem, I have redefined
+<code>catch</code> to save and restore <code>this</code>; the same
+should be done with any word that can catch an exception. As for
+<code>exit</code>, I simply forbid it (as a replacement, there is
+<code>exitm</code>).
+
+<p><code>inst-var</code> is just the same as <code>field</code>, with
+a different <code>does&gt;</code> action:
+<pre>
+@ this +
+</pre>
+Similar for <code>inst-value</code>.
+
+<p>Each class also has a wordlist that contains the words defined with
+<code>inst-var</code> and <code>inst-value</code>, and its protected
+words. It also has a pointer to its parent. <code>class</code> pushes
+the wordlists of the class an all its ancestors on the search order,
+and <code>end-class</code> drops them.
+
+<p>An interface is like a class without fields, parent and protected
+words; i.e., it just has a method map. If a class implements an
+interface, its method map contains a pointer to the method map of the
+interface. The positive offsets in the map are reserved for class
+methods, therefore interface map pointers have negative
+offsets. Interfaces have offsets that are unique throughout the
+system, unlike class selectors, whose offsets are only unique for the
+classes where the selector is available (invokable).
+
+<p>This structure means that interface selectors have to perform one
+indirection more than class selectors to find their method. Their body
+contains the interface map pointer offset in the class method map, and
+the method offset in the interface method map. The
+<code>does&gt;</code> action for an interface selector is, basically:
+
+<pre>
+( object selector-body )
+2dup selector-interface @ ( object selector-body object interface-offset )
+swap object-map @ + @ ( object selector-body map )
+swap selector-offset @ + @ execute
+</pre>
+
+where <code>object-map</code> and <code>selector-offset</code> are
+first fields and generate no code.
+
+<p>As a concrete example, consider the following code:
+
+<pre>
+interface
+  selector if1sel1
+  selector if1sel2
+end-interface if1
+
+object class
+  if1 implementation
+  selector cl1sel1
+  cell% inst-var cl1iv1
+
+' m1 overrides construct
+' m2 overrides if1sel1
+' m3 overrides if1sel2
+' m4 overrides cl1sel2
+end-class cl1
+
+create obj1 object dict-new drop
+create obj2 cl1    dict-new drop
+</pre>
+
+The data structure created by this code (including the data structure
+for <code>object</code>) is shown in the <a
+href="objects-implementation.eps">figure</a>, assuming a cell size of
+4.
+
+<h2>Related Work</h2>
+
+For a comparison with the Neon model you just have to compare the
+properties of the Neon model presented in <a href="opinion.html">the
+last issue</a> with the properties presented here.
+
+<p>Another well-known publication is <a href="#pountain87">[pountain87]</a>. However, it is not
+really about object-oriented programming, because it hardly deals with
+late binding. Instead, it focuses on features like information hiding
+and overloading that are characteristic of modular languages like Ada
+(83).
+
+<p>There are also many other papers on object-oriented Forth
+extensions; E.g., <a href="#rodriguez&poehlman96">[rodriguez&poehlman96]</a> lists 17 and <a href="#mckewan97">[mckewan97]</a> lists
+6. In the rest of this section I will discuss two systems that have
+the implementation using method maps in common with the package
+discussed here.
+
+<p>The model of <a href="#zsoter96">[zsoter96]</a> makes heavy use of an active object (like
+<code>this</code> in my model): The active object is not only used for
+accessing all fields, but also specifies the receiving object of every
+selector invocation; you have to change the active object explicitly
+with <code>{ ... }</code>, whereas in my model it changes more or less
+implicitly at <code>m: ... ;m</code>. Such a change at the method
+entry point is unnecessary with the <a href="#zsoter96">[zsoter96]</a> model, because the
+receiving object is the active object already; OTOH, the explicit
+change is absolutely necessary in that model, because otherwise no one
+could ever change the active object.
+
+<p>The model of <a href="#paysan94">[paysan94]</a> combines
+information hiding and overloading resolution (by keeping names in
+various wordlists) with object-oriented programming. It sets the
+active object implicitly on method entry, but also allows explicit
+changing (with <code>&gt;o...o&gt;</code> or with
+<code>with...endwith</code>). It uses parsing and state-smart objects
+and classes for resolving overloading and for early binding: the
+object or class parses the selector and determines the method from
+this. If the selector is not parsed by an object or class, it performs
+a call to the selector for the active object (late binding), like <a
+href="#zsoter96">[zsoter96]</a>.  Fields are always accessed through
+the active object. The big disadvantage of this model is the parsing
+and the state-smartness, which reduces extensibility and increases the
+opportunities for subtle bugs; essentially, you are only safe if you
+never tick or <code>postpone</code> an object or class.
+
+<h2>Acknowledgments</h2>
+
+Marcel Hendrix provided helpful comments on the paper. Andras Zsoter
+and Bernd Paysan helped me with the related works section.
+
+<h2>Glossary</h2>
+
+<dl>
+
+<dt><code>bind ( ... "class" "selector" -- ... )</code>
+<dd>execute the method for <code>selector</code> in <code>class</code>.
+
+<dt><code>&lt;bind&gt; ( class selector-xt -- xt )</code>
+<dd><code>xt</code> is the method for the selector
+<code>selector-xt</code> in <code>class</code>.
+
+<dt><code>bind' ( "class" "selector" -- xt )</code>
+<dd><code>xt</code> is the method for <code>selector</code> in <code>class</code>.
+
+<dt><code>[bind] ( compile-time: "class" "selector" -- ; run-time: ... -- ... )</code>
+<dd>compile the method for <code>selector</code> in <code>class</code>.
+
+<dt><code>class ( parent-class -- align offset )</code> <dd>start a
+new class definition as a child of <code>parent-class</code>.
+<code>align offset</code> are for use by <code>field</code> etc.
+
+<dt><code>class-&gt;map ( class -- map )</code> <dd><code>map</code>
+is the pointer to <code>class</code>'s method map; it points to the
+place in the map to which the selector offsets refer (i.e., where
+<code>object-map</code>s point to).
+
+<dt><code>class-inst-size ( class -- addr )</code>
+<dd>used as <code>class-inst-size 2@ ( class -- align size )</code>,
+gives the size specification for an instance (i.e. an object) of
+<code>class</code>.
+
+<dt><code>class-override! ( xt sel-xt class-map -- )</code>
+<dd><code>xt</code> is the new method for the selector
+<code>sel-xt</code> in <code>class-map</code>.
+
+<dt><code>construct ( ... object -- )</code><dd>initializes the data
+fields of <code>object</code>. The method for the class
+<code>object</code> just does nothing <code>( object -- )</code>.
+
+<dt><code>current' ( "selector" -- xt )</code>
+<dd><code>xt</code> is the method for <code>selector</code> in the current class.
+
+<dt><code>[current] ( compile-time: "selector" -- ; run-time: ... -- ... )</code>
+<dd>compile the method for <code>selector</code> in the current class.
+
+<dt><code>current-interface ( -- addr )</code>
+<dd>this variable contains the class or interface currently being
+defined.
+
+<dt><code>dict-new ( ... class -- object )</code> <dd><code>allot</code> and initialize an
+object of class <code>class</code> in the dictionary.
+
+<dt><code>drop-order ( class -- )</code> <dd>drops <code>class</code>'s wordlists from the search
+order. No checking is made whether <code>class</code>'s wordlists are actually
+on the search order.
+
+<dt><code>end-class ( align offset "name" -- )</code>
+<dd><code>name</code> execution: <code>-- class</code>
+
+<p>ends a class definition. The resulting class is <code>class</code>.
+
+
+<dt><code>end-class-noname ( align offset -- class )</code>
+<dd>ends a class definition. The resulting class is <code>class</code>.
+
+<dt><code>end-interface ( "name" -- )</code>
+<dd><code>name</code> execution: <code>-- interface</code>
+
+<p>ends an interface definition. The resulting interface is
+<code>interface</code>.
+
+<dt><code>end-interface-noname ( -- interface )</code> <dd>ends an
+interface definition. The resulting interface is
+<code>interface</code>.
+
+<dt><code>exitm ( -- )</code>
+<dd><code>exit</code> from a method; restore old <code>this</code>.
+
+<dt><code>heap-new ( ... class -- object )</code>
+<dd><code>allocate</code> and initialize an object of class <code>class</code>.
+
+<dt><code>implementation ( interface -- )</code> <dd>the current class
+implements <code>interface</code>. I.e., you can use all selectors of the
+interface in the current class and its descendents.
+
+<dt><code>init-object ( ... class object -- )</code> <dd>initializes a
+chunk of memory (<code>object</code>) to an object of class
+<code>class</code>; then performs <code>construct</code>.
+
+<dt><code>inst-value ( align1 offset1 "name" -- align2 offset2 )</code>
+<dd><code>name</code> execution: <code>-- w</code>
+
+<p><code>w</code> is the value of the field <code>name</code> in
+<code>this</code> object.
+
+<dt><code>inst-var ( align1 offset1 align size "name" -- align2 offset2 )</code>
+<dd><code>name</code> execution: <code>-- addr</code>
+
+<p><code>addr</code> is the address of the field <code>name</code> in
+<code>this</code> object.
+
+<dt><code>interface ( -- )</code>
+<dd>starts an interface definition.
+
+<dt><code>;m ( colon-sys -- ) ( run-time: -- )</code>
+<dd>end a method definition; restore old <code>this</code>.
+
+<dt><code>m: ( -- xt colon-sys ) ( run-time: object -- )</code>
+<dd>start a method definition; <code>object</code> becomes new <code>this</code>.
+
+<dt><code>method ( xt "name" -- )</code>
+<dd><code>name</code> execution: <code>... object -- ...</code>
+
+<p>creates selector <code>name</code> and makes <code>xt</code> its method in the current class.
+
+<dt><code>object ( -- class )</code>
+<dd>the ancestor of all classes.
+
+<dt><code>overrides ( xt "selector" -- )</code> <dd>replace default
+method for <code>selector</code> in the current class with
+<code>xt</code>. <code>overrides</code> must not be used during an
+interface definition.
+
+<dt><code>[parent] ( compile-time: "selector" -- ; run-time: ... object -- ... )</code>
+<dd>compile the method for <code>selector</code> in the parent of the
+current class.
+
+<dt><code>print ( object -- )</code><dd>prints the object. The
+method for the class <code>object</code> prints the address of the
+object and the address of its class.
+
+<dt><code>protected ( -- )</code>
+<dd>set the compilation wordlist to the current class's wordlist
+
+<dt><code>public ( -- )</code> <dd>restore the compilation wordlist
+that was in effect before the last <code>protected</code> that
+actually changed the compilation wordlist.
+
+<dt><code>push-order ( class -- )</code>
+<dd>add <code>class</code>'s wordlists to the search-order (in front)
+
+<dt><code>selector ( "name" -- )</code>
+<dd><code>name</code> execution: <code>... object -- ...</code>
+
+<p>creates selector <code>name</code> for the current class and its
+descendents; you can set a method for the selector in the current
+class with <code>overrides</code>.
+
+<dt><code>this ( -- object )</code> <dd>the receiving object of the
+current method (aka active object).
+
+<dt><code>&lt;to-inst&gt; ( w xt -- )</code> <dd>store <code>w</code>
+into the field <code>xt</code> in <code>this</code>
+object.
+
+<dt><code>[to-inst] ( compile-time: "name" -- ; run-time: w --
+)</code> <dd>store <code>w</code> into field <code>name</code> in
+<code>this</code> object.
+
+<dt><code>to-this ( object -- )</code> <dd>sets <code>this</code>
+(used internally, but useful when debugging).
+
+<dt><code>xt-new ( ... class xt -- object )</code>
+<dd>makes a new object, using <code>xt ( align size -- addr )</code>
+to get memory.
+
+</dl>
+
+
+<h2>References</h2>
+
+<!-- bibhtml:start -->
+<dl>
+
+<dt><a name="chambers&ungar89">[chambers&ungar89] Craig Chambers and David
+  Ungar.</a></dt> <dd>
+  Customization: Optimizing compiler technology for \sc Self, a
+  dynamically-typed object-oriented programming language.
+  In <em>SIGPLAN '89 Conference on Programming Language Design and
+  Implementation</em>, pages 146-160, 1989.
+</dd>
+
+<dt><a name="ertl89">[ertl89] M. Anton Ertl.</a></dt> <dd>
+  <a href="http://www.complang.tuwien.ac.at/papers/ertl89.ps.gz" >GRAY - ein
+  Generator f\"ur rekursiv absteigende Ybersetzer</a>.
+  Praktikum, Institut f\"ur Computersprachen, Technische Universit\"at
+  Wien, 1989.
+  In German.
+</dd>
+
+<dt><a name="ertl97">[ertl97] M. Anton Ertl.</a></dt> <dd>
+  <a href="http://www.complang.tuwien.ac.at/papers/ertl97.ps.gz" >GRAY - ein
+  Generator f\"ur rekursiv absteigende Ybersetzer</a>.
+  In <em>Forth-Tagung</em>, Ludwigshafen, 1997.
+  In German.
+</dd>
+
+<dt><a name="mckewan97">[mckewan97] Andrew McKewan.</a></dt> <dd>
+  Object-oriented programming in ANS Forth.
+  <em>Forth Dimensions</em>, March 1997.
+</dd>
+
+<dt><a name="paysan94">[paysan94] Bernd Paysan.</a></dt> <dd>
+  Object oriented bigFORTH.
+  <em>Vierte Dimension</em>, <b>10</b> no. 2, 1994.
+  An implementation in ANS Forth is available at
+  http://www.jwdt.com/ paysan/oof.zip.
+</dd>
+
+<dt><a name="pountain87">[pountain87] Dick Pountain.</a></dt> <dd>
+  <em>Object-Oriented Forth</em>.
+  Academic Press, London, 1987.
+</dd>
+
+<dt><a name="rodriguez&poehlman96">[rodriguez&poehlman96] Bradford J. Rodriguez
+  and W. F. S. Poehlman.</a></dt> <dd>
+  <a href="http://www.zetetics.com/bj/papers/oofs.htm" >A survey of
+  object-oriented Forths</a>.
+  <em>SIGPLAN Notices</em>, pages 39-42, April 1996.
+</dd>
+
+<dt><a name="zsoter96">[zsoter96] Andr\'as Zs\'oter.</a></dt> <dd>
+  <a href="http://www.forth.org/oopf.html" >Does late binding have to be
+  slow?</a>.
+  <em>Forth Dimensions</em>, <b>18</b> no. 1 pp. 31-35, 1996.
+</dd>
+
+</dl>
+<!-- bibhtml:end -->

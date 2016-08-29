@@ -1,0 +1,380 @@
+<title>Yet another Forth structures package</title>
+
+<h1>Yet another Forth structures package</h1>
+
+Many ways to add a feature like C's <code>struct</code> or Pascal's
+<code>RECORD</code> have been presented and discussed in the Forth
+community. One of them was posted on the
+USENET newsgroup <a href="news:comp.lang.forth">comp.lang.forth</a> in
+1989 (unfortunately I don't remember, by whom; possibly John Hayes)
+and convinced me with its simplicity, elegance, and power (in a word,
+with its Forth-ness).
+
+<p>I have used this basic approach ever since, e.g, in the parser
+generator Gray <a href="#ertl89">[ertl89]</a><a href="#ertl97">[ertl97]</a>.  It also inspired my approach for an
+object-oriented Forth extension.  The package I present here adds
+automatic handling of alignments, a bit of syntactic sugar, and
+optimization of fields with offset 0.
+
+<h2>Why explicit structure support?</h2>
+
+If we want to use a structure containing several fields, we could
+simply reserve memory for it, and access the fields using address
+arithmetic. As an example, consider a structure with the following
+fields
+
+<dl>
+<dt>a<dd>is a float
+<dt>b<dd>is a cell
+<dt>c<dd>is a float
+</dl>
+
+Given the (float-aligned) base address of the structure we get the
+address of the field
+
+<dl>
+<dt>a<dd>without doing anything further.
+<dt>b<dd>with <code>float+</code>
+<dt>c<dd>with <code>float+ cell+ faligned</code>
+</dl>
+
+It is easy to see that this can become quite tiring. 
+
+<p>Moreover, it is not very readable, because seeing a
+<code>cell+</code> tells us neither which kind of structure is
+accessed nor what field is accessed; we have to somehow infer the kind
+of structure, and then look up in the documentation, which field of
+that structure corresponds to that offset.
+
+<p>Finally, this kind of address arithmetic also causes maintenance
+troubles: If you add or delete a field somewhere in the middle of the
+structure, you have to find and change all computations for the fields
+afterwards.<!--(You may ask why you would want to add a field in the
+middle; one reason is if you have a base structure and have derived
+extended structures (see !!) from them, and now want to add a field to
+the base structure; this field would appear in the middle of the
+extended structures).-->
+
+<p>So, instead of using <code>cell+</code> and friends directly, how
+about storing the offsets in constants:
+
+<pre>
+0 constant a-offset
+0 float+ constant b-offset
+0 float+ cell+ faligned constant c-offset
+</pre>
+
+Now we can get the address of field <code>x</code> with <code>x-offset
++</code>. This is much better in all respects. Of course, you still
+have to change all later offset definitions if you add a field. You can
+fix this by declaring the offsets in the following way:
+
+<pre>
+0 constant a-offset
+a-offset float+ constant b-offset
+b-offset cell+ faligned constant c-offset
+</pre>
+
+Since we always use the offsets with <code>+</code>, using a defining
+word <code>cfield</code> that includes the <code>+</code> in the
+action of the defined word offers itself:
+
+<pre>
+: cfield ( n "name" -- )
+    create ,
+does> ( name execution: addr1 -- addr2 )
+    @ + ;
+
+0 cfield a
+0 a float+ cfield b
+0 b cell+ faligned cfield c
+</pre>
+
+Instead of <code>x-offset +</code>, we now simply write <code>x</code>.
+
+<p>The structure field words now can be used quite nicely. However,
+their definition is still a bit cumbersome: We have to repeat the
+name, the information about size and alignment is distributed before
+and after the field definitions etc.  The structure package presented
+here addresses these problems.
+
+<h2>Usage</h2>
+
+You can define a structure for a (data-less) linked list with
+<pre>
+struct
+    cell% field list-next
+end-struct list%
+</pre>
+
+With the address of the list node on the stack, you can compute the
+address of the field that contains the address of the next node with
+<code>list-next</code>. E.g., you can determine the length of a list
+with:
+
+<pre>
+: list-length ( list -- n )
+\ "list" is a pointer to the first element of a linked list
+\ "n" is the length of the list
+    0 begin ( list1 n1 )
+        over
+    while ( list1 n1 )
+        1+ swap list-next @ swap
+    repeat
+    nip ;
+</pre>
+
+<p>You can reserve memory for a list node in the dictionary with
+<code>list% %allot</code>, which leaves the address of the list node
+on the stack. For the equivalent allocation on the heap you can use
+<code>list% %alloc</code> (or, for an <code>allocate</code>-like stack
+effect (i.e., with ior), use <code>list% %allocate</code>).
+
+<p>Note that in ANS Forth the body of a <code>create</code>d word is
+<code>aligned</code> but not necessarily <code>faligned</code>;
+therefore, if you do a
+<pre>
+create <em>name</em> foo% %allot
+</pre>
+
+then the memory alloted for <code>foo%</code> is
+guaranteed to start at the body of <code><em>name</em></code> only if
+<code>foo%</code> contains only character, cell and double fields.
+
+<p>You can also include a structure <code>foo%</code> as field of
+another structure, with:
+<pre>
+struct
+...
+    foo% field ...
+...
+end-struct ...
+</pre>
+
+Instead of starting with an empty structure, you can also extend an
+existing structure. E.g., a plain linked list without data, as defined
+above, is hardly useful; You can extend it to a linked list of
+integers, like this:
+
+<pre>
+list%
+    cell% field intlist-int
+end-struct intlist%
+</pre>
+
+<code>intlist%</code> is a structure with two fields:
+<code>list-next</code> and <code>intlist-int</code>.
+
+<p><!--footnote-->This feature is also known as <em>extended records</em>
+<a href="#wirth88">[wirth88]</a>. It is the main innovation in the Oberon language; in other
+words, adding this feature to Modula-2 led Wirth to create a new
+language, write a new compiler etc.  Adding this feature to Forth just
+requires a few lines of code.
+
+<p>You can specify an array type containing </em>n</em> elements of
+type <code>foo%</code> like this:
+
+<pre>
+foo% <em>n</em> *
+</pre>
+
+You can use this array type in any place where you can use a normal
+type, e.g., when defining a <code>field</code>, or with
+<code>%allot</code>.
+
+<p>The first field is at the base address of a structure and the word
+for this field (e.g., <code>list-next</code>) actually does not change
+the address on the stack. You may be tempted to leave it away in the
+interest of run-time and space efficiency. This is not necessary,
+because the structure package optimizes this case and compiling such
+words does not generate any code. So, in the interest of readability
+and maintainability you should include the word for the field when
+accessing the field.
+
+<h2>Naming convention</h2>
+
+The field names that come to (my) mind are often quite generic, and,
+if used, would cause frequent name clashes. E.g., many structures
+probably contain a <code>counter</code> field. The structure names
+that come to (my) mind are often also the logical choice for the names
+of words that create such a structure.
+
+<p>Therefore, I have adopted the following naming conventions: 
+
+<ul>
+
+<li> The names of fields are of the form
+<code><em>struct</em>-<em>field</em></code>, where
+<code><em>struct</em></code> is the basic name of the structure, and
+<code><em>field</em></code> is the basic name of the field. You can
+think about field words as converting converts the (address of the)
+structure into the (address of the) field.
+
+<li> The names of structures are of the form
+<code><em>struct</em>%</code>, where
+<code><em>struct</em></code> is the basic name of the structure.
+
+</ul>
+
+This naming convention does not work that well for fields of extended
+structures; e.g., the integer list structure has a field
+<code>intlist-int</code>, but has <code>list-next</code>, not
+<code>intlist-next</code>.
+
+<h2>Implementation</h2>
+
+The central idea in the implementation is to pass the data about the
+structure being built on the stack, not in some global
+variable. Everything else falls into place naturally once this design
+decision is made.
+
+<p>The type description on the stack is of the form <em>align
+size</em>. Keeping the size on the top-of-stack makes dealing with arrays very simple.
+
+<p><code>field</code> is a defining word that uses <code>create</code>
+and <code>does&gt;</code>. The body of the field contains the offset
+of the field, and the normal <code>does></code> action is
+
+<pre>
+@ +
+</pre>
+
+i.e., add the offset to the address, giving the stack effect
+<code>addr1 -- addr2</code> for a field.
+
+<p>This simple structure is slightly complicated by the optimization
+for fields with offset 0, which requires a different
+<code>does></code>-part (because we cannot rely on there being
+something on the stack if such a field is invoked during
+compilation). Therefore, we put the different <code>does></code>-parts
+in separate words, and decide which one to invoke based on the
+offset. For a zero offset, the field is basically a noop; it is
+immediate, and therefore no code is generated when it is compiled.
+
+<h2>Acknowledgments</h2>
+
+Marcel Hendrix provided helpful comments on the paper.
+
+<h2>Glossary</h2>
+
+<dl>
+
+<dt><code>%align ( align size -- )</code>
+
+<dd>align the data space pointer to the alignment <code>align</code>.
+
+
+<dt><code>%alignment ( align size -- align )</code>
+<dd>extract the alignment of a type descriptor.
+
+
+<dt><code>%alloc ( align size -- addr )</code>
+
+<dd>allocate <code>size</code> address units with alignment
+<code>align</code>, giving a data block at <code>addr</code>;
+<code>throw</code>s an ior code if not successful.
+
+
+<dt><code>%allocate ( align size -- addr ior )</code>
+
+<dd>allocate <code>size</code> address units with alignment <code>align</code>, similar to <code>allocate</code>.
+
+
+<dt><code>%allot ( align size -- addr )</code>
+
+<dd>allot <code>size</code> address units of data space with alignment
+<code>align</code>; the resulting block of data is found at <code>addr</code>.
+
+
+<dt><code>cell% ( -- align size )</code>
+<dd>
+
+
+<dt><code>char% ( -- align size )</code>
+<dd>
+
+
+<dt><code>create-field ( align1 offset1 align size "name" --  align2 offset2 )</code>
+
+<dd><code>name</code> execution: <code>-- addr</code>
+
+<p>like <code>field</code>, but without the <code>does></code>-part.
+
+
+<dt><code>dfloat% ( -- align size )</code>
+<dd>
+
+
+<dt><code>double% ( -- align size )</code>
+<dd>
+
+
+<dt><code>end-struct ( align size "name" -- )</code>
+
+<dd><code>name</code> execution: <code>-- align size2</code>
+
+<p><code>size2</code> is <code>size</code> aligned with
+<code>align</code>; this ensures that all elements of an array of
+<code>name</code> elements have alignment <code>align</code>.
+
+
+<dt><code>field ( align1 offset1 align size "name" --  align2 offset2 )</code>
+
+<dd><code>name</code> execution: <code>addr1 -- addr1+offset1</code>
+
+<p>create a field <code>name</code> with offset <code>offset1</code>,
+and the type given by <code>size align</code>. <code>offset2</code> is
+the offset of the next field, and <code>align2</code> is the alignment
+of all fields.
+
+
+<dt><code>float% ( -- align size )</code>
+<dd>
+
+
+<dt><code>nalign ( addr1 n -- addr2 )</code>
+
+<dd><code>addr2</code> is the aligned version of <code>addr1</code> wrt the alignment <code>n</code>.
+
+
+<dt><code>%size ( align size -- size )</code>
+<dd>extract the size of a type descriptor.
+
+<dt><code>sfloat% ( -- align size )</code>
+<dd>
+
+
+<dt><code>struct ( -- align size )</code>
+
+<dd>an empty structure, used to start a structure definition.
+
+</dl>
+
+<h2>References</h2>
+
+<!-- bibhtml:start -->
+<dl>
+
+<dt><a name="ertl89">[ertl89] M. Anton Ertl.</a></dt> <dd>
+  <a href="http://www.complang.tuwien.ac.at/papers/ertl89.ps.gz" >GRAY - ein
+  Generator f\"ur rekursiv absteigende Ybersetzer</a>.
+  Praktikum, Institut f\"ur Computersprachen, Technische Universit\"at
+  Wien, 1989.
+  In German.
+</dd>
+
+<dt><a name="ertl97">[ertl97] M. Anton Ertl.</a></dt> <dd>
+  <a href="http://www.complang.tuwien.ac.at/papers/ertl97.ps.gz" >GRAY - ein
+  Generator f\"ur rekursiv absteigende Ybersetzer</a>.
+  In <em>Forth-Tagung</em>, Ludwigshafen, 1997.
+  In German.
+</dd>
+
+<dt><a name="wirth88">[wirth88] Niklaus Wirth.</a></dt> <dd>
+  From Modula to Oberon.
+  <em>Software--Practice and Experience</em>, <b>18</b> no. 7 pp. 661-670,
+  July 1988.
+</dd>
+
+</dl>
+<!-- bibhtml:end -->
