@@ -1,0 +1,800 @@
+\ SFP24.SCR                                  hhh 17:04 20.07.98
+  written using LMI PC/FORTH 3.2
+  Heinrich Hohl, University of Konstanz
+
+The floating point numbers used in this package are represented
+by a composite double length number. 24 bits are used for the
+mantissa, and the top 8 bits for the exponent.
+
+The mantissa spans a range from -999999 through -100000
+for negative numbers and from 100000 through 999999 for
+positive numbers. It contains an implied decimal point five
+digits from the right.
+
+Floating point numbers are handled like double length numbers
+with respect to stack operations, storage etc.
+
+\ load screen                                hhh 11:20 03.08.98
+  FORTH DEFINITIONS  DECIMAL
+  BSTART OVERLAY
+
+  2 ?SCREENS 1- THRU
+
+  FORTH DEFINITIONS  DECIMAL
+  BSTART OVERLAY
+  2 ?SCREENS 1- THRU
+
+  BSAVE OVERLAY SFP24
+  0 RETURN
+
+
+
+
+\ constants                                  hhh 17:04 20.07.98
+4 CONSTANT FPSIZE
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\ variables                                  hhh 17:04 20.07.98
+VARIABLE exp       \ exponent of floating point numbers
+VARIABLE sign      \ sign of mantissa or exponent
+VARIABLE places    \ number of digits behind decimal point
+
+
+
+
+
+
+
+
+
+
+
+
+\ pack and unpack floating point numbers     hhh 11:36 03.08.98
+: 8>16 ( n -- n') [ HEX ]
+  DUP 0080 AND  IF FF00 OR THEN ; DECIMAL
+\ turn a signed 8 bit number into a signed 16 bit number
+
+: PACK ( d n -- f)  COMBINE ;
+\ pack d mantissa and n exponent into floating point number
+
+: UNPACK ( f -- d n)
+  SPLIT  SWAP 8>16  SWAP 8>16 ;
+\ unpack floating point number to d mantissa and n exponent
+
+: M@ ( addr -- d)  DUP 1+ @ ( lo) SWAP C@ ( hi) 8>16 ;
+\ fetch double length number from table of 24 bit numbers
+
+
+\ basic operators                            hhh 17:04 20.07.98
+CREATE F@    ( addr -- f )         ' 2@    @  ' F@    !
+CREATE F!    ( f addr -- )         ' 2!    @  ' F!    !
+CREATE F@L   ( ptr -- f )          ' 2@L   @  ' F@L   !
+CREATE F!L   ( f ptr -- )          ' 2!L   @  ' F!L   !
+
+CREATE FDROP ( f1 f2 -- f1)        ' 2DROP @  ' FDROP !
+CREATE FDUP  ( f -- f f)           ' 2DUP  @  ' FDUP  !
+CREATE FOVER ( f1 f2 -- f1 f2 f1)  ' 2OVER @  ' FOVER !
+CREATE FSWAP ( f1 f2 -- f2 f1)     ' 2SWAP @  ' FSWAP !
+
+: FROT ( f1 f2 f3 -- f2 f3 f1)  5 ROLL  5 ROLL ;
+
+: FLITERAL  ( f -- )  ?COMP  COMPILE dlit  SWAP , , ; IMMEDIATE
+: FCONSTANT ( f -- )  CREATE  , ,  ( -- f) DOES> 2@ ;
+: FVARIABLE ( -- )    CREATE  0 , 0 , ;
+\ normalize and shift /1/                    hhh 17:04 20.07.98
+: INFLATE ( ud -- ud')
+  BEGIN  2DUP 1.00000 D<  WHILE  10 D* -1 exp +!  REPEAT ;
+\ inflate mantissae smaller than 1.00000 and adjust exponent
+
+: DEFLATE ( ud -- ud')
+  BEGIN  2DUP 9.99999 D>  WHILE  10 D/  1 exp +!  REPEAT ;
+\ deflate mantissae larger than 9.99999 and adjust exponent
+
+
+
+
+
+
+
+
+\ normalize and shift /2/                    hhh 17:04 20.07.98
+: TRIM ( d n -- d' n')
+  exp !                       \ store exponent
+  2DUP D0=                    \ adjust only if d<>0
+  IF    0                     \ d=0 needs a zero exponent
+  ELSE  DUP 0<  >R            \ save sign on return stack
+        DABS INFLATE DEFLATE  \ adjust mantissa and exponent
+        R> ?DNEGATE           \ restore sign of mantissa
+        exp @                 \ put exponent on top of mantissa
+  THEN ;
+
+\ Trim a double length number (d) with exponent (n) so that
+\ afterwards the absolute value of the mantissa spans a range
+\ from from 100000 through 999999. A zero mantissa is always
+\ returned with a zero exponent.
+
+\ normalize and shift /3/                    hhh 17:04 20.07.98
+: DSHIFT ( d x -- d')
+  DUP 0<
+  IF    NEGATE
+        0  DO 10 D/  LOOP
+  ELSE  0 ?DO 10 D*  LOOP  THEN ;
+\ decimal left shift (x<0 shifts |x| digits to the right)
+
+
+
+
+
+
+
+
+
+\ conversion                                 hhh 17:04 20.07.98
+: FLOAT ( d -- f)  5  DPL @ 0 MAX -  TRIM PACK ;
+\ convert double length number to float considering DPL
+
+: D>F ( d -- f)  5 TRIM PACK ;
+\ convert double length number to float (ignore DPL)
+
+: S>F ( n -- f)  S>D D>F ;
+\ convert single length number to float
+
+: F>D ( f -- d)  UNPACK  5 - DSHIFT ;
+\ convert floating point number to double length number
+
+: F>S ( f -- n)  F>D DROP ;
+\ convert floating point number to single length number
+
+\ triple length number operators /1/         hhh 17:04 20.07.98
+VARIABLE lo1  VARIABLE hi1
+VARIABLE lo2  VARIABLE hi2
+
+: TU* ( ud1 ud2 -- ut)
+  hi2 ! lo2 ! hi1 ! lo1 !
+  lo1 @ lo2 @ UM* 0
+  lo1 @ hi2 @ UM* D+
+  lo2 @ hi1 @ UM* D+
+  hi1 @ hi2 @ UM* SWAP D+ ;
+\ multiply two ud numbers; product is ut number
+\ (hi1*hi2) must not exceed an unsigned single length number!
+
+
+
+
+\ triple length number operators /2/         hhh 17:44 02.08.98
+2VARIABLE denom
+
+: Q2*  ( q - q')
+  D2* 2SWAP  DUP >R  D2* 2SWAP  R> 0< IF 1. D+ THEN ;
+
+: TU/ ( ut ud - ud_quot)  denom 2!  0
+  32 0
+  DO  DUP >R
+      Q2*
+      2DUP denom 2@ DU< NOT  R> 0<  OR
+      IF  denom 2@ D- 2SWAP  1. D+ 2SWAP  THEN
+   LOOP  ( ud_quot ud_rem)  2DROP ;
+\ divide ut number by ud number
+\ taken from the "Mathbox" by Nathaniel Grossman
+
+\ arithmetics /1/                            hhh 17:04 20.07.98
+: FABS    ( f -- f')  UNPACK  >R DABS R>  PACK ;
+: FNEGATE ( f -- f')  UNPACK  >R DNEGATE R>  PACK ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+\ arithmetics /2/                            hhh 17:04 20.07.98
+: F+ ( f1 f2 -- f3)
+  2DUP D0= IF 2DROP EXIT THEN
+  2SWAP
+  2DUP D0= IF 2DROP EXIT THEN
+  UNPACK >R 2SWAP UNPACK R>    \ ds: m1 m2 x2 x1
+  2DUP MAX exp !               \ keep larger exponent
+  -                            \ ds: m1 m2 (x2-x1)
+  DUP 0>                       \ is x2 the larger exponent?
+  IF  >R 2SWAP R>  THEN        \ yes: use m1 for right shifts
+  ABS DUP 5 >                  \ number of shifts too large?
+  IF    3DROP exp @            \ yes: return f with larger exp.
+  ELSE  0 ?DO 10 D/ LOOP       \  no: perform right shifts
+        D+                     \      calculate new mantissa
+        exp @ TRIM             \      get exponent and trim
+  THEN  PACK ;
+\ arithmetics /3/                            hhh 17:04 20.07.98
+: F- ( f1 f2 -- f3)  FNEGATE F+ ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\ arithmetics /4/                            hhh 17:04 20.07.98
+: F* ( f1 f2 -- f3)
+  UNPACK >R  2SWAP          \ unpack and save exponents
+  UNPACK >R                 \
+  DUP 0< >R  DABS  2SWAP    \ save signs and form absolutes
+  DUP 0< >R  DABS           \
+                            \ ds: |m1||m2|  rs: s2 s1 x1 x2
+  TU*                       \ multiply mantissae
+  100000. TU/               \ scale result
+  R> R> XOR  ?DNEGATE       \ calculate sign and apply it
+  R> R> +                   \ calculate exponent
+  TRIM PACK ;
+
+: F10* ( f -- f')  2DUP OR  IF UNPACK 1+ PACK THEN ;
+\ multiply by ten by increasing exponent by one (unless f=0)
+
+\ arithmetics /5/                            hhh 17:04 20.07.98
+: F/ ( f1 f2 -- f3)
+  UNPACK >R  2SWAP          \ unpack and save exponents
+  UNPACK >R                 \
+  DUP 0< >R  DABS  2SWAP    \ save signs and form absolutes
+  DUP 0< >R  DABS           \
+                            \ ds: |m1||m2|  rs: s2 s1 x1 x2
+  >R >R 1000000. TU*        \ inflate numerator
+  R> R> TU/                 \ divide mantissae
+  R> R> XOR  ?DNEGATE       \ calculate and apply sign
+  R> R> - 1-                \ calculate exponent
+  TRIM PACK ;
+
+: F10/ ( f -- f')  2DUP OR  IF UNPACK 1- PACK THEN ;
+\ divide by ten by decreasing exponent by one (unless f=0)
+
+\ comparison                                 hhh 17:04 20.07.98
+: F0=  ( f -- ?)  D0= ;
+: F0<> ( f -- ?)  D0= 0= ;
+: F0<  ( f -- ?)  UNPACK DROP  D0< ;
+: F0>  ( f -- ?)  UNPACK DROP  0. D> ;
+
+: F=  ( f1 f2 -- ?)  D= ;
+: F<> ( f1 f2 -- ?)  D<> ;
+: F<  ( f1 f2 -- ?)  F- F0< ;
+: F>  ( f1 f2 -- ?)  F- F0> ;
+
+: FMAX ( f1 f2 -- f3)
+  2OVER 2OVER F<  IF 2SWAP THEN  2DROP ;
+
+: FMIN ( f1 f2 -- f3)
+  2OVER 2OVER F>  IF 2SWAP THEN  2DROP ;
+\ number input /1/                           hhh 17:04 20.07.98
+: CONVERT-MANTISSA ( addr -- d addr')
+  0. ROT  DUP 1+ C@  ASCII - =  DUP sign !  -  CONVERT
+  DUP C@  ASCII . =
+  IF    DUP >R  CONVERT  DUP R> - 1- DPL !
+  ELSE  -1 DPL !  THEN
+  >R  sign @ ?DNEGATE  R> ;
+\ convert mantissa and return address of terminating character
+
+: CONVERT-EXPONENT ( addr -- n addr')
+  0. ROT  DUP 1+ C@  ASCII - =  DUP sign !  -  CONVERT
+  >R  DROP sign @ ?NEGATE  R> ;
+\ convert exponent and return address of terminating character
+
+
+
+\ number input /2/                           hhh 17:04 20.07.98
+: NUMBER? ( ^str -- d ?)
+  CONVERT-MANTISSA
+  DUP C@  ASCII E =
+  IF  CONVERT-EXPONENT >R
+      5 +  DPL @ 0 MAX -  TRIM PACK
+     -2 DPL !  R>
+  THEN
+  C@  DUP BL =  SWAP 0=  OR ;
+\ DPL=-2 if float; -1 if single; 0, 1, 2,... if double
+
+: FNUMBER? ( ^str -- f ?)
+  NUMBER? DUP >R
+  IF  DPL @ 2+ IF FLOAT THEN  THEN R> ;
+
+
+\ number input /3/                           hhh 17:04 20.07.98
+: NUMBER, ( d ? -- )
+  0= ?UNDEFINED
+  DPL @  -1 =
+  IF    DROP [COMPILE] LITERAL
+  ELSE  [COMPILE] DLITERAL  THEN ;
+\ executed by compiler after NUMBER? (compiles n|d|f)
+
+: /NUMBER ( d ? -- n|d|f)
+  0= ?UNDEFINED  DPL @  -1 =  IF DROP THEN ;
+\ executed by interpreter after NUMBER? (puts n|d|f on stack)
+
+: INSTALL-SFP ( -- )
+  ['] NUMBER?     [ 73 ORIGIN+ ] LITERAL !
+  ['] NUMBER,     [ 74 ORIGIN+ ] LITERAL !
+  ['] /NUMBER DUP [ 75 ORIGIN+ ] LITERAL !  FENCE ! ;
+\ formatted output /1/                       hhh 17:04 20.07.98
+: PLACES ( n -- )  0 MAX  places ! ;
+\ specify number of places behind the decimal point
+
+: (FD.) ( fd -- addr len)
+  TUCK DABS
+  <#  places @ 0 ?DO # LOOP  ASCII . HOLD  #S  ROT SIGN  #> ;
+\ convert fixed point double length number to formatted string
+
+
+
+
+
+
+
+
+\ formatted output /2/                       hhh 17:04 20.07.98
+: (E.) ( f -- addr len)
+  ?DECIMAL
+  UNPACK  exp !
+  places @ 5 -  DSHIFT  (FD.)
+  " E" COUNT STRCAT  exp @ (.) STRCAT ;
+\ convert f to a formatted string in exponential format
+
+: E. ( f -- )  (E.) TYPE SPACE ;
+\ display f in exponential format
+
+: E.R ( f width -- )  >R (E.) R> OVER - SPACES TYPE ;
+\ display f right justified in a field of specified width
+
+
+
+\ formatted output /3/                       hhh 17:05 20.07.98
+: (F.) ( f -- addr len)
+  ?DECIMAL
+  UNPACK  exp !
+  places @ 5 - exp @ +  DSHIFT  (FD.) ;
+\ convert f to a formatted string in fixed format
+
+: F. ( f -- )  (F.) TYPE SPACE ;
+\ display f in fixed format
+
+: F.R ( f width -- )  >R (F.) R> OVER - SPACES TYPE ;
+\ display f right justified in a field of specified width
+
+
+
+
+\ functions /1/                              hhh 18:35 29.04.00
+: 3! ( t addr -- )  DUP >R ! R> 2+ 2! ;
+: 3@ ( addr -- t )  DUP >R 2+ 2@ R> @ ;
+
+CREATE arg  6 /ALLOT
+
+: SQRT ( ut -- ud)
+  arg 3!
+  999.999                        \ ds: ud
+  BEGIN  2DUP >R >R
+         arg 3@  R> R>           \ ds: ud ut ud
+         TU/                     \ ds: ud (ut/ud)
+         2OVER 2OVER D>
+  WHILE  D+ D2/  REPEAT          \ ds: ud'
+  2DROP ;
+\ Newton iteration x' = «(x+a/x) for a ó 999999ý
+\ functions /2/                              hhh 15:30 03.08.98
+: FSQRT ( f -- f')
+  2DUP D0= IF EXIT THEN
+  UNPACK
+  2 /MOD  >R                     \ calc and save new exponent
+  IF  1000.000                   \ for odd exponents
+  ELSE 100.000 THEN              \ for even exponents
+  TU*                            \ inflate mantissa
+  SQRT                           \ calculate new mantissa
+  R>                             \ get new exponent
+  PACK ;
+
+
+
+
+
+\ functions /3/                              hhh 11:24 03.08.98
+CREATE logtable
+(  1.0) 0.000000 C, , 0.010723 C, , 0.021189 C, , 0.031408 C, ,
+(  1.1) 0.041392 C, , 0.051152 C, , 0.060697 C, , 0.070037 C, ,
+(  1.2) 0.079181 C, , 0.088136 C, , 0.096910 C, , 0.105510 C, ,
+(  1.3) 0.113943 C, , 0.122215 C, , 0.130333 C, , 0.138302 C, ,
+(  1.4) 0.146128 C, , 0.153814 C, , 0.161368 C, , 0.168792 C, ,
+(  1.5) 0.176091 C, , 0.183269 C, , 0.190331 C, , 0.197280 C, ,
+(  1.6) 0.204119 C, , 0.210853 C, , 0.217483 C, , 0.224014 C, ,
+(  1.7) 0.230448 C, , 0.236789 C, , 0.243038 C, , 0.249198 C, ,
+(  1.8) 0.255272 C, , 0.261262 C, , 0.267171 C, , 0.273001 C, ,
+(  1.9) 0.278753 C, , 0.284430 C, , 0.290034 C, , 0.295567 C, ,
+
+
+
+
+\ functions /4/                              hhh 11:24 03.08.98
+(  2.0) 0.301029 C, , 0.306425 C, , 0.311753 C, , 0.317018 C, ,
+(  2.1) 0.322219 C, , 0.327358 C, , 0.332438 C, , 0.337459 C, ,
+(  2.2) 0.342422 C, , 0.347330 C, , 0.352182 C, , 0.356981 C, ,
+(  2.3) 0.361727 C, , 0.366422 C, , 0.371067 C, , 0.375663 C, ,
+(  2.4) 0.380211 C, , 0.384711 C, , 0.389166 C, , 0.393575 C, ,
+(  2.5) 0.397940 C, , 0.402261 C, , 0.406540 C, , 0.410777 C, ,
+(  2.6) 0.414973 C, , 0.419129 C, , 0.423245 C, , 0.427323 C, ,
+(  2.7) 0.431363 C, , 0.435366 C, , 0.439332 C, , 0.443262 C, ,
+(  2.8) 0.447158 C, , 0.451018 C, , 0.454844 C, , 0.458637 C, ,
+(  2.9) 0.462397 C, , 0.466125 C, , 0.469822 C, , 0.473486 C, ,
+
+
+
+
+
+\ functions /5/                              hhh 11:24 03.08.98
+(  3.0) 0.477121 C, , 0.480725 C, , 0.484299 C, , 0.487845 C, ,
+(  3.1) 0.491361 C, , 0.494850 C, , 0.498310 C, , 0.501743 C, ,
+(  3.2) 0.505149 C, , 0.508529 C, , 0.511883 C, , 0.515211 C, ,
+(  3.3) 0.518513 C, , 0.521791 C, , 0.525044 C, , 0.528273 C, ,
+(  3.4) 0.531478 C, , 0.534660 C, , 0.537819 C, , 0.540954 C, ,
+(  3.5) 0.544068 C, , 0.547159 C, , 0.550228 C, , 0.553276 C, ,
+(  3.6) 0.556302 C, , 0.559308 C, , 0.562292 C, , 0.565257 C, ,
+(  3.7) 0.568201 C, , 0.571126 C, , 0.574031 C, , 0.576916 C, ,
+(  3.8) 0.579783 C, , 0.582631 C, , 0.585460 C, , 0.588271 C, ,
+(  3.9) 0.591064 C, , 0.593839 C, , 0.596597 C, , 0.599337 C, ,
+
+
+
+
+
+\ functions /6/                              hhh 11:24 03.08.98
+(  4.0) 0.602059 C, , 0.604765 C, , 0.607455 C, , 0.610127 C, ,
+(  4.1) 0.612783 C, , 0.615423 C, , 0.618048 C, , 0.620656 C, ,
+(  4.2) 0.623249 C, , 0.625826 C, , 0.628388 C, , 0.630936 C, ,
+(  4.3) 0.633468 C, , 0.635986 C, , 0.638489 C, , 0.640978 C, ,
+(  4.4) 0.643452 C, , 0.645913 C, , 0.648360 C, , 0.650793 C, ,
+(  4.5) 0.653212 C, , 0.655618 C, , 0.658011 C, , 0.660391 C, ,
+(  4.6) 0.662757 C, , 0.665111 C, , 0.667452 C, , 0.669781 C, ,
+(  4.7) 0.672097 C, , 0.674401 C, , 0.676693 C, , 0.678973 C, ,
+(  4.8) 0.681241 C, , 0.683497 C, , 0.685741 C, , 0.687974 C, ,
+(  4.9) 0.690196 C, , 0.692406 C, , 0.694605 C, , 0.696793 C, ,
+
+
+
+
+
+\ functions /7/                              hhh 11:24 03.08.98
+(  5.0) 0.698970 C, , 0.701136 C, , 0.703291 C, , 0.705436 C, ,
+(  5.1) 0.707570 C, , 0.709693 C, , 0.711807 C, , 0.713910 C, ,
+(  5.2) 0.716003 C, , 0.718086 C, , 0.720159 C, , 0.722222 C, ,
+(  5.3) 0.724275 C, , 0.726319 C, , 0.728353 C, , 0.730378 C, ,
+(  5.4) 0.732393 C, , 0.734399 C, , 0.736396 C, , 0.738384 C, ,
+(  5.5) 0.740362 C, , 0.742332 C, , 0.744292 C, , 0.746244 C, ,
+(  5.6) 0.748188 C, , 0.750122 C, , 0.752048 C, , 0.753965 C, ,
+(  5.7) 0.755874 C, , 0.757775 C, , 0.759667 C, , 0.761551 C, ,
+(  5.8) 0.763427 C, , 0.765295 C, , 0.767155 C, , 0.769007 C, ,
+(  5.9) 0.770852 C, , 0.772688 C, , 0.774516 C, , 0.776337 C, ,
+
+
+
+
+
+\ functions /8/                              hhh 11:24 03.08.98
+(  6.0) 0.778151 C, , 0.779957 C, , 0.781755 C, , 0.783546 C, ,
+(  6.1) 0.785329 C, , 0.787106 C, , 0.788875 C, , 0.790636 C, ,
+(  6.2) 0.792391 C, , 0.794139 C, , 0.795880 C, , 0.797613 C, ,
+(  6.3) 0.799340 C, , 0.801060 C, , 0.802773 C, , 0.804480 C, ,
+(  6.4) 0.806179 C, , 0.807873 C, , 0.809559 C, , 0.811239 C, ,
+(  6.5) 0.812913 C, , 0.814580 C, , 0.816241 C, , 0.817895 C, ,
+(  6.6) 0.819543 C, , 0.821185 C, , 0.822821 C, , 0.824451 C, ,
+(  6.7) 0.826074 C, , 0.827692 C, , 0.829303 C, , 0.830909 C, ,
+(  6.8) 0.832508 C, , 0.834102 C, , 0.835690 C, , 0.837272 C, ,
+(  6.9) 0.838849 C, , 0.840419 C, , 0.841984 C, , 0.843544 C, ,
+
+
+
+
+
+\ functions /9/                              hhh 11:24 03.08.98
+(  7.0) 0.845098 C, , 0.846646 C, , 0.848189 C, , 0.849726 C, ,
+(  7.1) 0.851258 C, , 0.852784 C, , 0.854306 C, , 0.855821 C, ,
+(  7.2) 0.857332 C, , 0.858837 C, , 0.860338 C, , 0.861832 C, ,
+(  7.3) 0.863322 C, , 0.864807 C, , 0.866287 C, , 0.867762 C, ,
+(  7.4) 0.869231 C, , 0.870696 C, , 0.872156 C, , 0.873611 C, ,
+(  7.5) 0.875061 C, , 0.876506 C, , 0.877946 C, , 0.879382 C, ,
+(  7.6) 0.880813 C, , 0.882239 C, , 0.883661 C, , 0.885078 C, ,
+(  7.7) 0.886490 C, , 0.887898 C, , 0.889301 C, , 0.890700 C, ,
+(  7.8) 0.892094 C, , 0.893484 C, , 0.894869 C, , 0.896250 C, ,
+(  7.9) 0.897627 C, , 0.898999 C, , 0.900367 C, , 0.901730 C, ,
+
+
+
+
+
+\ functions /10/                             hhh 11:24 03.08.98
+(  8.0) 0.903089 C, , 0.904445 C, , 0.905795 C, , 0.907142 C, ,
+(  8.1) 0.908485 C, , 0.909823 C, , 0.911157 C, , 0.912487 C, ,
+(  8.2) 0.913813 C, , 0.915135 C, , 0.916453 C, , 0.917768 C, ,
+(  8.3) 0.919078 C, , 0.920384 C, , 0.921686 C, , 0.922984 C, ,
+(  8.4) 0.924279 C, , 0.925569 C, , 0.926856 C, , 0.928139 C, ,
+(  8.5) 0.929418 C, , 0.930694 C, , 0.931966 C, , 0.933234 C, ,
+(  8.6) 0.934498 C, , 0.935759 C, , 0.937016 C, , 0.938269 C, ,
+(  8.7) 0.939519 C, , 0.940765 C, , 0.942008 C, , 0.943247 C, ,
+(  8.8) 0.944482 C, , 0.945714 C, , 0.946943 C, , 0.948168 C, ,
+(  8.9) 0.949390 C, , 0.950608 C, , 0.951823 C, , 0.953034 C, ,
+
+
+
+
+
+\ functions /11/                             hhh 11:33 03.08.98
+(  9.0) 0.954242 C, , 0.955447 C, , 0.956648 C, , 0.957846 C, ,
+(  9.1) 0.959041 C, , 0.960232 C, , 0.961421 C, , 0.962606 C, ,
+(  9.2) 0.963787 C, , 0.964966 C, , 0.966141 C, , 0.967313 C, ,
+(  9.3) 0.968482 C, , 0.969648 C, , 0.970811 C, , 0.971971 C, ,
+(  9.4) 0.973127 C, , 0.974281 C, , 0.975431 C, , 0.976579 C, ,
+(  9.5) 0.977723 C, , 0.978864 C, , 0.980003 C, , 0.981138 C, ,
+(  9.6) 0.982271 C, , 0.983400 C, , 0.984527 C, , 0.985650 C, ,
+(  9.7) 0.986771 C, , 0.987889 C, , 0.989004 C, , 0.990116 C, ,
+(  9.8) 0.991226 C, , 0.992332 C, , 0.993436 C, , 0.994537 C, ,
+(  9.9) 0.995635 C, , 0.996730 C, , 0.997823 C, , 0.998912 C, ,
+( 10.0) 1.000000 C, ,
+
+
+
+
+\ functions /12/                             hhh 15:30 03.08.98
+: LOG ( ud -- ud')
+  2500 UM/MOD  SWAP >R           \ save remainder
+  40 - ( offset) 3 * logtable +  \ addr of left neighbour
+  DUP M@  ROT 3 + M@             \ left and right neighbours
+  2OVER D-                       \ difference of neighbours
+  DROP  R> 2500 */  0            \ scale difference
+  D+ ;                           \ and add to left neighbour
+\ interpolate logtable for 1.00000 <= ud <= 9.99999
+
+: FLOG ( f -- f')
+  UNPACK
+  DUP 0< >R ABS  1000.000 ROT D*   R> ?DNEGATE
+  2SWAP LOG  D+  -1 TRIM  PACK ;
+
+
+\ functions /13/                             hhh 11:25 03.08.98
+CREATE alogtable
+( 0.00)  1.00000 C, , 1.00577 C, , 1.01157 C, , 1.01741 C, ,
+( 0.01)  1.02329 C, , 1.02920 C, , 1.03514 C, , 1.04111 C, ,
+( 0.02)  1.04712 C, , 1.05317 C, , 1.05925 C, , 1.06536 C, ,
+( 0.03)  1.07151 C, , 1.07770 C, , 1.08392 C, , 1.09018 C, ,
+( 0.04)  1.09647 C, , 1.10280 C, , 1.10917 C, , 1.11557 C, ,
+( 0.05)  1.12201 C, , 1.12849 C, , 1.13501 C, , 1.14156 C, ,
+( 0.06)  1.14815 C, , 1.15478 C, , 1.16144 C, , 1.16815 C, ,
+( 0.07)  1.17489 C, , 1.18168 C, , 1.18850 C, , 1.19536 C, ,
+( 0.08)  1.20226 C, , 1.20920 C, , 1.21618 C, , 1.22320 C, ,
+( 0.09)  1.23026 C, , 1.23737 C, , 1.24451 C, , 1.25169 C, ,
+
+
+
+
+\ functions /14/                             hhh 11:25 03.08.98
+( 0.10)  1.25892 C, , 1.26619 C, , 1.27350 C, , 1.28085 C, ,
+( 0.11)  1.28824 C, , 1.29568 C, , 1.30316 C, , 1.31069 C, ,
+( 0.12)  1.31825 C, , 1.32586 C, , 1.33352 C, , 1.34121 C, ,
+( 0.13)  1.34896 C, , 1.35675 C, , 1.36458 C, , 1.37246 C, ,
+( 0.14)  1.38038 C, , 1.38835 C, , 1.39636 C, , 1.40442 C, ,
+( 0.15)  1.41253 C, , 1.42069 C, , 1.42889 C, , 1.43714 C, ,
+( 0.16)  1.44543 C, , 1.45378 C, , 1.46217 C, , 1.47061 C, ,
+( 0.17)  1.47910 C, , 1.48764 C, , 1.49623 C, , 1.50487 C, ,
+( 0.18)  1.51356 C, , 1.52229 C, , 1.53108 C, , 1.53992 C, ,
+( 0.19)  1.54881 C, , 1.55775 C, , 1.56675 C, , 1.57579 C, ,
+
+
+
+
+
+\ functions /15/                             hhh 11:25 03.08.98
+( 0.20)  1.58489 C, , 1.59404 C, , 1.60324 C, , 1.61250 C, ,
+( 0.21)  1.62181 C, , 1.63117 C, , 1.64058 C, , 1.65006 C, ,
+( 0.22)  1.65958 C, , 1.66916 C, , 1.67880 C, , 1.68849 C, ,
+( 0.23)  1.69824 C, , 1.70804 C, , 1.71790 C, , 1.72782 C, ,
+( 0.24)  1.73780 C, , 1.74783 C, , 1.75792 C, , 1.76807 C, ,
+( 0.25)  1.77827 C, , 1.78854 C, , 1.79887 C, , 1.80925 C, ,
+( 0.26)  1.81970 C, , 1.83020 C, , 1.84077 C, , 1.85139 C, ,
+( 0.27)  1.86208 C, , 1.87283 C, , 1.88364 C, , 1.89452 C, ,
+( 0.28)  1.90546 C, , 1.91646 C, , 1.92752 C, , 1.93865 C, ,
+( 0.29)  1.94984 C, , 1.96110 C, , 1.97242 C, , 1.98380 C, ,
+
+
+
+
+
+\ functions /16/                             hhh 11:25 03.08.98
+( 0.30)  1.99526 C, , 2.00678 C, , 2.01836 C, , 2.03001 C, ,
+( 0.31)  2.04173 C, , 2.05352 C, , 2.06538 C, , 2.07730 C, ,
+( 0.32)  2.08929 C, , 2.10135 C, , 2.11348 C, , 2.12569 C, ,
+( 0.33)  2.13796 C, , 2.15030 C, , 2.16271 C, , 2.17520 C, ,
+( 0.34)  2.18776 C, , 2.20039 C, , 2.21309 C, , 2.22587 C, ,
+( 0.35)  2.23872 C, , 2.25164 C, , 2.26464 C, , 2.27771 C, ,
+( 0.36)  2.29086 C, , 2.30409 C, , 2.31739 C, , 2.33077 C, ,
+( 0.37)  2.34422 C, , 2.35776 C, , 2.37137 C, , 2.38506 C, ,
+( 0.38)  2.39883 C, , 2.41268 C, , 2.42661 C, , 2.44061 C, ,
+( 0.39)  2.45470 C, , 2.46888 C, , 2.48313 C, , 2.49746 C, ,
+
+
+
+
+
+\ functions /17/                             hhh 11:25 03.08.98
+( 0.40)  2.51188 C, , 2.52638 C, , 2.54097 C, , 2.55564 C, ,
+( 0.41)  2.57039 C, , 2.58523 C, , 2.60015 C, , 2.61517 C, ,
+( 0.42)  2.63026 C, , 2.64545 C, , 2.66072 C, , 2.67608 C, ,
+( 0.43)  2.69153 C, , 2.70707 C, , 2.72270 C, , 2.73841 C, ,
+( 0.44)  2.75422 C, , 2.77012 C, , 2.78612 C, , 2.80220 C, ,
+( 0.45)  2.81838 C, , 2.83465 C, , 2.85101 C, , 2.86747 C, ,
+( 0.46)  2.88403 C, , 2.90068 C, , 2.91742 C, , 2.93426 C, ,
+( 0.47)  2.95120 C, , 2.96824 C, , 2.98538 C, , 3.00261 C, ,
+( 0.48)  3.01995 C, , 3.03738 C, , 3.05492 C, , 3.07255 C, ,
+( 0.49)  3.09029 C, , 3.10813 C, , 3.12607 C, , 3.14412 C, ,
+
+
+
+
+
+\ functions /18/                             hhh 11:25 03.08.98
+( 0.50)  3.16227 C, , 3.18053 C, , 3.19889 C, , 3.21736 C, ,
+( 0.51)  3.23593 C, , 3.25461 C, , 3.27340 C, , 3.29230 C, ,
+( 0.52)  3.31131 C, , 3.33042 C, , 3.34965 C, , 3.36899 C, ,
+( 0.53)  3.38844 C, , 3.40800 C, , 3.42767 C, , 3.44746 C, ,
+( 0.54)  3.46736 C, , 3.48738 C, , 3.50751 C, , 3.52776 C, ,
+( 0.55)  3.54813 C, , 3.56861 C, , 3.58921 C, , 3.60994 C, ,
+( 0.56)  3.63078 C, , 3.65174 C, , 3.67282 C, , 3.69402 C, ,
+( 0.57)  3.71535 C, , 3.73680 C, , 3.75837 C, , 3.78007 C, ,
+( 0.58)  3.80189 C, , 3.82384 C, , 3.84591 C, , 3.86812 C, ,
+( 0.59)  3.89045 C, , 3.91291 C, , 3.93550 C, , 3.95822 C, ,
+
+
+
+
+
+\ functions /19/                             hhh 11:25 03.08.98
+( 0.60)  3.98107 C, , 4.00405 C, , 4.02717 C, , 4.05041 C, ,
+( 0.61)  4.07380 C, , 4.09732 C, , 4.12097 C, , 4.14476 C, ,
+( 0.62)  4.16869 C, , 4.19275 C, , 4.21696 C, , 4.24130 C, ,
+( 0.63)  4.26579 C, , 4.29042 C, , 4.31519 C, , 4.34010 C, ,
+( 0.64)  4.36515 C, , 4.39035 C, , 4.41570 C, , 4.44119 C, ,
+( 0.65)  4.46683 C, , 4.49262 C, , 4.51855 C, , 4.54464 C, ,
+( 0.66)  4.57088 C, , 4.59726 C, , 4.62381 C, , 4.65050 C, ,
+( 0.67)  4.67735 C, , 4.70435 C, , 4.73151 C, , 4.75882 C, ,
+( 0.68)  4.78630 C, , 4.81393 C, , 4.84172 C, , 4.86967 C, ,
+( 0.69)  4.89778 C, , 4.92606 C, , 4.95450 C, , 4.98310 C, ,
+
+
+
+
+
+\ functions /20/                             hhh 11:25 03.08.98
+( 0.70)  5.01187 C, , 5.04080 C, , 5.06990 C, , 5.09917 C, ,
+( 0.71)  5.12861 C, , 5.15822 C, , 5.18800 C, , 5.21795 C, ,
+( 0.72)  5.24807 C, , 5.27837 C, , 5.30884 C, , 5.33949 C, ,
+( 0.73)  5.37031 C, , 5.40132 C, , 5.43250 C, , 5.46386 C, ,
+( 0.74)  5.49540 C, , 5.52713 C, , 5.55904 C, , 5.59113 C, ,
+( 0.75)  5.62341 C, , 5.65587 C, , 5.68852 C, , 5.72136 C, ,
+( 0.76)  5.75439 C, , 5.78761 C, , 5.82103 C, , 5.85463 C, ,
+( 0.77)  5.88843 C, , 5.92243 C, , 5.95662 C, , 5.99100 C, ,
+( 0.78)  6.02559 C, , 6.06038 C, , 6.09536 C, , 6.13055 C, ,
+( 0.79)  6.16595 C, , 6.20154 C, , 6.23734 C, , 6.27335 C, ,
+
+
+
+
+
+\ functions /21/                             hhh 11:25 03.08.98
+( 0.80)  6.30957 C, , 6.34599 C, , 6.38263 C, , 6.41948 C, ,
+( 0.81)  6.45654 C, , 6.49381 C, , 6.53130 C, , 6.56901 C, ,
+( 0.82)  6.60693 C, , 6.64507 C, , 6.68343 C, , 6.72202 C, ,
+( 0.83)  6.76082 C, , 6.79986 C, , 6.83911 C, , 6.87859 C, ,
+( 0.84)  6.91830 C, , 6.95824 C, , 6.99841 C, , 7.03882 C, ,
+( 0.85)  7.07945 C, , 7.12032 C, , 7.16143 C, , 7.20277 C, ,
+( 0.86)  7.24435 C, , 7.28618 C, , 7.32824 C, , 7.37055 C, ,
+( 0.87)  7.41310 C, , 7.45589 C, , 7.49894 C, , 7.54223 C, ,
+( 0.88)  7.58577 C, , 7.62956 C, , 7.67361 C, , 7.71791 C, ,
+( 0.89)  7.76247 C, , 7.80728 C, , 7.85235 C, , 7.89768 C, ,
+
+
+
+
+
+\ functions /22/                             hhh 11:25 03.08.98
+( 0.90)  7.94328 C, , 7.98913 C, , 8.03526 C, , 8.08164 C, ,
+( 0.91)  8.12830 C, , 8.17523 C, , 8.22242 C, , 8.26989 C, ,
+( 0.92)  8.31763 C, , 8.36565 C, , 8.41395 C, , 8.46252 C, ,
+( 0.93)  8.51138 C, , 8.56051 C, , 8.60993 C, , 8.65964 C, ,
+( 0.94)  8.70963 C, , 8.75991 C, , 8.81048 C, , 8.86135 C, ,
+( 0.95)  8.91250 C, , 8.96396 C, , 9.01571 C, , 9.06775 C, ,
+( 0.96)  9.12010 C, , 9.17275 C, , 9.22571 C, , 9.27897 C, ,
+( 0.97)  9.33254 C, , 9.38642 C, , 9.44060 C, , 9.49510 C, ,
+( 0.98)  9.54992 C, , 9.60505 C, , 9.66050 C, , 9.71627 C, ,
+( 0.99)  9.77237 C, , 9.82878 C, , 9.88553 C, , 9.94260 C, ,
+( 1.00) 10.00000 C, ,
+
+
+
+
+\ functions /23/                             hhh 14:46 03.08.98
+: ALOG ( ud -- ud')
+  250 UM/MOD  SWAP >R            \ save remainder
+  3 * alogtable +                \ addr of left neighbour
+  DUP M@  ROT 3 + M@             \ left and right neighbour
+  2OVER D-                       \ difference of neighbours
+  DROP  R> 250 */  0             \ scale difference
+  D+ ;                           \ and add to left neighbour
+\ interpolate alogtable for 0.00000 <= ud <= 0.99999
+
+
+
+
+
+
+
+\ functions /24/                             hhh 15:35 03.08.98
+: FALOG ( f -- f')
+  UNPACK DSHIFT
+  2DUP
+  D2/ D2/ 25000 M/MOD >R DROP  \ divide by 100.000; save quot
+  25000 R@ M* D2* D2* D-       \ calculate ud_rem
+  ALOG                         \ new mantissa, no need to trim
+  R> PACK ;                    \ get exponent and pack number
+
+\ The routine 2DUP ... D- divides a d number by 100.000 and
+\ returns the quotient (n) and the remainder (ud).
+\  6.12345 e.g. is split up into  6 and 0.12345
+\ -6.12345 e.g. is split up into -7 and 0.87655
+\ Floored division automatically gives the correct result for
+\ negative f numbers.
+
+\ main command                               hhh 16:37 02.08.98
+  DECIMAL  5 PLACES
+
+: SFP ( -- )
+  INSTALL-SFP
+  DECIMAL  5 PLACES ;
+
+
+
+
+
+
+
+
+
+
+\ excise headers                             hhh 18:38 02.08.98
+EXCISE exp places
+EXCISE 8>16 8>16
+EXCISE INFLATE DEFLATE
+EXCISE lo1 TU*
+EXCISE denom TU/
+EXCISE CONVERT-MANTISSA CONVERT-EXPONENT
+EXCISE NUMBER? NUMBER?
+EXCISE NUMBER, INSTALL-SFP
+EXCISE (FD.) (FD.)
+EXCISE 3! SQRT
+EXCISE logtable LOG
+EXCISE alogtable ALOG
+
+
+
