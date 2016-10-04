@@ -10,7 +10,7 @@ Version 1.0.0 - 2016-10-01
 
 This package provides words for convenient handling of fixed point numbers.
 
-A fixed point number (f) is an integer number with an implied decimal point at a specified position. Fixed point numbers may be used instead of floating point numbers if only basic arithmetic operations (+, -, *, /) are required in an application.
+A fixed point number (f) is an integer number with an implied decimal point at a specified position. Fixed point numbers may be used instead of floating point numbers if only basic arithmetic operations (+, -, \*, /) are required in an application.
 
 What does *implied decimal point* mean?
 
@@ -25,32 +25,11 @@ Although weight and price are officially shown in kg and EUR, they are internall
 
 The package is available in versions for the following FORTH systems:
 
-<table>
-<tr>
-  <td><b>System</b></td>
-  <td><b>Standard</b></td>
-  <td><b>Type</b></td>
-  <td><b>Files</b></td>
-</tr>
-<tr>
-  <td>PC/FORTH (LMI)</td>
-  <td>Forth-83</td>
-  <td>16-bit</td>
-  <td><a href="fixed_lmi.txt">fixed_lmi.txt</a></td>
-</tr>
-<tr>
-  <td>SwiftForth (Forth, Inc.)</td>
-  <td>ANS Forth</td>
-  <td>32-bit</td>
-  <td><a href="fixed_sf.f">fixed_sf.f</a></td>
-</tr>
-<tr>
-  <td>VFX Forth (MPE)</td>
-  <td>ANS Forth</td>
-  <td>32-bit</td>
-  <td><a href="fixed_vfx.fth">fixed_vfx.fth</a></td>
-</tr>
-</table>
+|System                  |Standard |Type  |Files                            |
+|------------------------|---------|------|---------------------------------|
+|PC/FORTH (LMI)          |Forth-83 |16-bit|[fixed\_lmi.txt](fixed_lmi.txt)  |
+|SwiftForth (Forth, Inc.)|ANS Forth|32-bit|[fixed\_sf.f](fixed_sf.f)        |
+|VFX Forth (MPE)         |ANS Forth|32-bit|[fixed\_vfx.fth](fixed_vfx.fth)  |
 
 The package was developed under LMI PC/FORTH in 1992 and published in the German Forth magazine [Vierte Dimension Nr. 2/1992, p.7][1]. The LMI version is included for completeness and because someone might still want to use the package on a 16-bit system.
 

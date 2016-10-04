@@ -51,38 +51,12 @@ For an excellent discussion on binary vs. decimal floating point, read the follo
 
 The package is available in versions for the following FORTH systems:
 
-<table>
-<tr>
-  <td><b>System</b></td>
-  <td><b>Standard</b></td>
-  <td><b>Type</b></td>
-  <td><b>Files</b></td>
-</tr>
-<tr>
-  <td>PC/FORTH (LMI)</td>
-  <td>Forth-83</td>
-  <td>16-bit</td>
-  <td><a href="sfp16_lmi.txt">sfp16_lmi.txt</a></td>
-</tr>
-<tr>
-  <td>PC/FORTH (LMI)</td>
-  <td>Forth-83</td>
-  <td>16-bit</td>
-  <td><a href="sfp24_lmi.txt">sfp24_lmi.txt</a></td>
-</tr>
-<tr>
-  <td>SwiftForth (Forth, Inc.)</td>
-  <td>ANS Forth</td>
-  <td>32-bit</td>
-  <td><a href="sfp_sf.f">sfp_sf.f</a></td>
-</tr>
-<tr>
-  <td>VFX Forth (MPE)</td>
-  <td>ANS Forth</td>
-  <td>32-bit</td>
-  <td><a href="sfp_vfx.fth">sfp_vfx.fth</a></td>
-</tr>
-</table>
+|System                  |Standard |Type  |Files                            |
+|------------------------|---------|------|---------------------------------|
+|PC/FORTH (LMI)          |Forth-83 |16-bit|[sfp16\_lmi.txt](sfp16_lmi.txt)  |
+|PC/FORTH (LMI)          |Forth-83 |16-bit|[sfp24k\_lmi.txt](sfp24_lmi.txt) |
+|SwiftForth (Forth, Inc.)|ANS Forth|32-bit|[sfp\_sf.f](sfp_sf.f)            |
+|VFX Forth (MPE)         |ANS Forth|32-bit|[sfp\_vfx.fth](sfp_vfx.fth)      |
 
 The package was developed under LMI PC/FORTH in 1992. The first version SFP16 used a 16-bit significand and a 16-bit exponent. It had a resolution of 4 decimal digits and was used to acquire, save and plot data in automated measurement systems.
 

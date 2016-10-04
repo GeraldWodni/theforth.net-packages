@@ -4,9 +4,9 @@ key-value version 1.0.0
 key-value description Software floating point package
 key-value license MIT
 key-value main sfp_sf.f
-key-list tags LMI_Forth
+key-list tags LMI-Forth
 key-list tags SwiftForth
-key-list tags VFX_Forth
+key-list tags VFX-Forth
 key-list tags ansforth94
 key-list tags forth-83
 key-list tags forth-94
