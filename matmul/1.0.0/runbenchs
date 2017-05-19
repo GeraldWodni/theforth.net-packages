@@ -1,0 +1,44 @@
+#!/bin/bash
+#all the ${VAR:=default} settings are default settings that can be
+#overridden by setting the environment variable VAR before entering the script,
+#e.g.:
+# VFXHOME=/nfs/nfstmp/anton/VfxLinEval-4.71 ./runbenchs
+#
+#This script tries gforth-fast, vfxlin (several FP packages) and sf if present
+#you can disable some or all of these systems with
+# GFORTH=xx VFXLIN=xx SF=xx ./runbenchs
+#(where xx is not an existing program)
+#For running a different Forth system, best use the SF variable, e.g.:
+# SF=iforth GFORTH=xx VFXLIN=xx ./runbenchs
+
+command -v perf >/dev/null 2>&1 && : ${TIMING:=perf stat -e instructions -e cycles}
+: ${TIMING:=time}
+: ${RUN=benchmark.4th}
+
+: ${VFXLIN:=vfxlin}
+if command -v $VFXLIN >/dev/null 2>&1; then
+    : ${VFXHOME:=`$VFXLIN 's" %vfxpath%" expand cr type cr bye'|tail -1`}
+    : ${VFXLIB=$VFXHOME/Lib}
+    : ${VFXX86:=$VFXLIB/x86}
+    if test ! -f $VFXX86/Ndp387.fth; then
+        VFXX86=$VFXLIB
+    fi
+fi
+: ${GFORTH:=gforth-fast}
+: ${SF:=sf 'include %SwiftForth/lib/options/fpmath.f'}
+
+command -v $GFORTH && \
+    for i in 1 2 3 13 4 5 15; do $TIMING $GFORTH -e "$i constant faxpy-nostride-variant create matmul-verbose include matmul.4th include $RUN bye"; done
+command -v $VFXLIN && \
+for f in $VFXX86/Ndp387.fth $VFXX86/Hfp387.fth $VFXX86/HfpGL32.fth $VFXLIB/SoftFP32.separate.fth $VFXLIB/SoftFP32.combined.fth; do
+  if test -f $f; then
+    echo $f
+    for i in 2 3 13 4 5 15; do
+      $TIMING $VFXLIN "include $f $i constant faxpy-nostride-variant create matmul-verbose include matmul.4th include $RUN bye"
+    done
+  else
+    echo "$f not present (%vfxpath%/VFXHOME wrong?), skipping"
+  fi
+done
+command -v $SF && \
+    for i in 2 3 13 4 5 15; do $TIMING $SF "$i constant faxpy-nostride-variant create matmul-verbose include matmul.4th include $RUN bye"; done
