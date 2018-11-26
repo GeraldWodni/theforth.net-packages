@@ -1,0 +1,10 @@
+Sprintf Versions
+~~~~~~~~~~~~~~~~
+
+26/11/2018 Version 1.0.1
+   - Changed README.MD so that theforth.net displayed the conversion specifiers
+     etc properly at the end of the file (theforth.net can't handle <br> tags
+     whereas GitHub can).
+
+10/10/2018 Version 1.0.0
+   - Initial release.
