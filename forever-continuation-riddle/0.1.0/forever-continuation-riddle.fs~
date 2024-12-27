@@ -1,0 +1,13 @@
+\ Just for fun! 
+
+: cont@
+  ( -- a  ; Fetch current continuation and continue with continuation on top of stack )
+  r@
+; 
+: forever-continuation-riddle
+  ( Fun begins :
+    1. How it works?
+    2. How to break this loop?
+    3. Can be extended to embrace multiple definitions? It remains a loop?  )
+  ." RUN FOREV" cont@ >r [char] E emit r@
+;
